@@ -21,7 +21,8 @@
       "account_opening"
     ],
     "url": "https://www.fsc.go.kr/no010101/82205",
-    "verified_at": null,
+    "verified_at": "2026-08-12",
+    "verified_method": "정제본 본문 확인 + 핵심 수치 원문 교차 확인",
     "visa_scope": [
       "ALL"
     ]
@@ -47,7 +48,8 @@
       "transfer_limit"
     ],
     "url": "https://www.fsc.go.kr/comm/getFile?srvcId=BBSTY1&upperNo=82205&fileTy=ATTACH&fileNo=1",
-    "verified_at": null,
+    "verified_at": "2026-08-12",
+    "verified_method": "정제본 본문 확인 + 핵심 수치 원문 교차 확인",
     "visa_scope": [
       "ALL"
     ]
@@ -74,7 +76,8 @@
       "mobile_arc"
     ],
     "url": "https://www.fsc.go.kr/no010101/84208",
-    "verified_at": null,
+    "verified_at": "2026-08-12",
+    "verified_method": "정제본 본문 확인 + 핵심 수치 원문 교차 확인",
     "visa_scope": [
       "ALL"
     ]
@@ -101,7 +104,8 @@
       "mobile_arc"
     ],
     "url": "https://www.fsc.go.kr/comm/getFile?srvcId=BBSTY1&upperNo=84208&fileTy=ATTACH&fileNo=1",
-    "verified_at": null,
+    "verified_at": "2026-08-12",
+    "verified_method": "정제본 본문 확인 + 핵심 수치 원문 교차 확인",
     "visa_scope": [
       "ALL"
     ]
@@ -129,7 +133,8 @@
       "required_docs"
     ],
     "url": "https://www.hikorea.go.kr/info/InfoDatail.pt?CAT_SEQ=177&PARENT_ID=139",
-    "verified_at": null,
+    "verified_at": "2026-08-12",
+    "verified_method": "정제본 본문 확인 + 핵심 수치 원문 교차 확인",
     "visa_scope": [
       "ALL"
     ]
@@ -156,7 +161,8 @@
       "registration"
     ],
     "url": "https://www.hikorea.go.kr/info/InfoDatail.pt?CAT_SEQ=176&PARENT_ID=139",
-    "verified_at": null,
+    "verified_at": "2026-08-12",
+    "verified_method": "정제본 본문 확인 + 핵심 수치 원문 교차 확인",
     "visa_scope": [
       "ALL"
     ]
@@ -183,7 +189,8 @@
       "identity_verification"
     ],
     "url": "https://www.hikorea.go.kr/info/InfoDatail.pt?CAT_SEQ=7221&PARENT_ID=139",
-    "verified_at": null,
+    "verified_at": "2026-08-12",
+    "verified_method": "정제본 본문 확인 + 핵심 수치 원문 교차 확인",
     "visa_scope": [
       "ALL"
     ]
@@ -209,7 +216,8 @@
       "transfer_limit"
     ],
     "url": "https://www.korea.kr/news/policyNewsView.do?newsId=148928795",
-    "verified_at": null,
+    "verified_at": "2026-08-12",
+    "verified_method": "정제본 본문 확인 + 핵심 수치 원문 교차 확인",
     "visa_scope": [
       "ALL"
     ]
@@ -236,7 +244,8 @@
       "mobile_arc"
     ],
     "url": "https://www.korea.kr/news/policyNewsView.do?newsId=148940798",
-    "verified_at": null,
+    "verified_at": "2026-08-12",
+    "verified_method": "정제본 본문 확인 + 핵심 수치 원문 교차 확인",
     "visa_scope": [
       "ALL"
     ]

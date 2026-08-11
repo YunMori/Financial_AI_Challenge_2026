@@ -6,7 +6,7 @@ publisher_type: government
 doc_type: press_release
 source_url: https://www.fsc.go.kr/comm/getFile?srvcId=BBSTY1&upperNo=84208&fileTy=ATTACH&fileNo=1
 published_at: '2025-03-20'
-verified_at: null
+verified_at: '2026-08-12'
 sha256: be5c6f5b8753aeb77b7a9c09968a19c2480e37c6a1a0b75acb7aed764811ede6
 text_sha256: 2bf28cec0097fa9d0a0252b2ad6d853e6b2218dfca89e19579281d9ce1bf9549
 license_note: 공공누리 제1유형
