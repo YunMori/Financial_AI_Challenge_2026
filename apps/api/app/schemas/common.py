@@ -58,13 +58,21 @@ class FallbackReason(StrEnum):
     화면에는 사유별로 매핑된 정적 문구를 보여준다.
     """
 
+    # ── 생성 전 차단 (규칙 기반, LLM 호출 자체를 하지 않음) ──────────
     TIER_C = "tier_c"  # 개별 승인·한도·금리 예측 요구
+    SCAM_VERDICT = "scam_verdict"  # "이거 사기인가요?" — 판정 금지 (F8)
+    INJECTION_BLOCKED = "injection_blocked"  # 입력 대부분이 인젝션 패턴
+    LOW_CONFIDENCE = "low_confidence"  # 검색 신뢰도 임계값 미달
+
+    # ── 생성 후 차단 (출력 검사) ─────────────────────────────────────
     NO_CITATION = "no_citation"  # 인용 0건
     PHANTOM_CITATION = "phantom_citation"  # 존재하지 않는 [근거 n] 을 지어냄
-    UNSUPPORTED_NUMBER = "unsupported_number"  # 근거에 없는 수치 사용 ★환각의 대부분
-    LOW_CONFIDENCE = "low_confidence"  # 검색 신뢰도 임계값 미달
+    UNSUPPORTED_NUMBER = "unsupported_number"  # 근거에 없는 수치 ★환각의 대부분
     FORBIDDEN_EXPRESSION = "forbidden_expression"  # "보장", "반드시 승인" 등
+    CREDENTIAL_REQUEST = "credential_request"  # 답변이 계좌·비밀번호를 요구 (사칭 대응)
     OUT_OF_SCOPE = "out_of_scope"  # 모델이 스스로 범위 밖이라 신고
+
+    # ── 외부 요인 ────────────────────────────────────────────────────
     MODEL_REFUSAL = "model_refusal"  # 안전 분류기 거절 (stop_reason=refusal)
     UPSTREAM_ERROR = "upstream_error"  # 재시도·폴백 후에도 실패
 
