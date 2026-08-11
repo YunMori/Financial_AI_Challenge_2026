@@ -1,0 +1,12 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 대상 이용자 상당수가 모바일 우선이다. 360px 기준으로 먼저 설계한다. */
+:root { color-scheme: light; }
+body { -webkit-text-size-adjust: 100%; }
+
+/* 터치 타깃 44px 이상 (planner §11.5) */
+@layer components {
+  .tap { @apply min-h-11 px-4 py-2.5; }
+}
