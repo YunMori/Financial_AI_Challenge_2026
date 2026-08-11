@@ -8,12 +8,24 @@ from __future__ import annotations
 
 from functools import lru_cache
 from pathlib import Path
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import Field, field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
+# `app/` 를 담고 있는 디렉터리. 로컬은 `apps/api`, Docker 는 `/app` 이다.
+# 인덱스 같은 런타임 자산은 이 기준으로 푼다 — 그래야 실행 위치와 무관하게 맞다.
+API_ROOT = Path(__file__).resolve().parents[1]
+
+
+def _resolve(path: Path, base: Path) -> Path:
+    """상대 경로를 `base` 기준으로 푼다.
+
+    `.env` 에 `data/chroma` 라고 쓰면 실행 위치(CWD)에 따라 다른 곳을 가리킨다.
+    uvicorn 을 `apps/api` 에서 띄우든 리포 루트에서 띄우든 같은 파일을 봐야 한다.
+    """
+    return path if path.is_absolute() else (base / path).resolve()
 
 
 class Settings(BaseSettings):
@@ -43,8 +55,8 @@ class Settings(BaseSettings):
     embed_model: str = "intfloat/multilingual-e5-large"
 
     # ── 인덱스 ───────────────────────────────────────────────────────
-    chroma_path: Path = REPO_ROOT / "apps" / "api" / "data" / "chroma"
-    bm25_index_path: Path = REPO_ROOT / "apps" / "api" / "data" / "bm25.pkl"
+    chroma_path: Path = API_ROOT / "data" / "chroma"
+    bm25_index_path: Path = API_ROOT / "data" / "bm25.pkl"
     chroma_collection: str = "kbuddy"
 
     # ── 검색 파라미터 (planner §6.3, §6.6) ───────────────────────────
@@ -75,7 +87,9 @@ class Settings(BaseSettings):
     ecos_api_key: str = ""
 
     # ── 운영 ─────────────────────────────────────────────────────────
-    cors_origins: list[str] = ["http://localhost:3000"]
+    # `NoDecode` 가 없으면 pydantic-settings 가 **검증자보다 먼저** 값을 JSON 으로
+    # 파싱하려 해서 `CORS_ORIGINS=http://localhost:3000` 이 JSONDecodeError 를 낸다.
+    cors_origins: Annotated[list[str], NoDecode] = ["http://localhost:3000"]
     rate_limit_per_min: int = 20
     log_level: str = "INFO"
 
@@ -86,6 +100,11 @@ class Settings(BaseSettings):
         if isinstance(v, str):
             return [o.strip() for o in v.split(",") if o.strip()]
         return v
+
+    @field_validator("chroma_path", "bm25_index_path", mode="after")
+    @classmethod
+    def _resolve_runtime_paths(cls, v: Path) -> Path:
+        return _resolve(v, API_ROOT)
 
     @property
     def llm_enabled(self) -> bool:
