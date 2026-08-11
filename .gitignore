@@ -1,0 +1,37 @@
+# 시크릿
+.env
+.env.local
+.env.*.local
+
+# 코퍼스 원문 — 저작권 (planner §5.2)
+# 커밋하는 것은 processed/ 의 정제본과 메타데이터, sha256 해시뿐이다.
+corpus/raw/
+
+# 통계 원본 CP949 드롭존 — 재다운로드 가능, sha256으로 검증 (corpus/stats/SOURCES.md)
+corpus/stats/_incoming/
+
+# 빌드 산출물 — 인덱스는 Docker 빌드 타임에 생성해 이미지에 동봉한다
+data/
+apps/api/data/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.egg-info/
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+.turbo/
+
+# 에디터 · OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
