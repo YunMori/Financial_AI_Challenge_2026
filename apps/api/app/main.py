@@ -17,6 +17,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
 from app.config import get_settings
+from app.routers import chat
 
 settings = get_settings()
 logging.basicConfig(level=settings.log_level)
@@ -39,6 +40,9 @@ app.add_middleware(
     allow_methods=["GET", "POST"],
     allow_headers=["Content-Type", "X-KB-Lang"],
 )
+
+
+app.include_router(chat.router)
 
 
 class HealthResponse(BaseModel):
