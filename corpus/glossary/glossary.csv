@@ -1,0 +1,36 @@
+code,ko,en,vi,category,note
+ARC,외국인등록증,Alien Registration Card,Thẻ đăng ký người nước ngoài,document,계좌개설의 전제
+MOBILE_ARC,모바일 외국인등록증,Mobile Alien Registration Card,Thẻ đăng ký người nước ngoài điện tử,document,2025-03-21부터 6개 은행 금융거래 인정
+PASSPORT,여권,Passport,Hộ chiếu,document,
+EMPLOYMENT_CERT,재직증명서,Certificate of Employment,Giấy xác nhận công tác,document,거래목적 증빙
+EMPLOYMENT_CONTRACT,근로계약서,Employment Contract,Hợp đồng lao động,document,재직 3개월 미만 시 요구되는 경우
+PAY_STUB,급여명세서,Pay Statement,Bảng lương,document,거래목적 증빙
+ENROLLMENT_CERT,재학증명서,Certificate of Enrollment,Giấy chứng nhận đang học,document,D-2 외국인등록 제출서류
+BUSINESS_LICENSE,사업자등록증 사본,Copy of Business Registration Certificate,Bản sao giấy phép kinh doanh,document,
+JOB_SEEKING_PLAN,구직활동계획서,Job-Seeking Activity Plan,Kế hoạch tìm việc,document,D-10 외국인등록 제출서류
+LIMITED_ACCOUNT,한도제한계좌,Limited-Purpose Account,Tài khoản hạn mức,term,거래목적 증빙 미제출 시 개설되는 계좌
+TRANSACTION_PURPOSE,금융거래 목적 확인,Financial Transaction Purpose Verification,Xác minh mục đích giao dịch tài chính,term,대포통장 근절 제도(2012 시행)
+NON_FACE_TO_FACE,비대면 계좌개설,Non-Face-to-Face Account Opening,Mở tài khoản trực tuyến,term,
+DESIGNATED_BANK,지정거래은행,Designated Transaction Bank,Ngân hàng giao dịch chỉ định,term,
+OVERSEAS_REMITTANCE,해외송금,Overseas Remittance,Chuyển tiền ra nước ngoài,term,
+ORIS,해외송금 통합관리시스템,Overseas Remittance Integrated System,,term,베트남어 미확보 — 원어 병기로 폴백
+BASE_RATE,매매기준율,Base Exchange Rate,Tỷ giá tham chiếu,term,당일 고시 기준(실시간 아님)
+VOICE_PHISHING,보이스피싱,Voice Phishing,Lừa đảo qua điện thoại,term,
+PAYMENT_SUSPENSION,지급정지,Payment Suspension,Đình chỉ thanh toán,term,피해구제 1단계
+E-9,비전문취업(E-9),Non-professional Employment (E-9),Lao động phổ thông (E-9),visa,
+E-8,계절근로(E-8),Seasonal Work (E-8),Lao động thời vụ (E-8),visa,
+E-7,특정활동(E-7),Specific Activities (E-7),Hoạt động đặc định (E-7),visa,
+D-2,유학(D-2),Study Abroad (D-2),Du học (D-2),visa,
+D-4,일반연수(D-4),General Training (D-4),Đào tạo chung (D-4),visa,
+D-8,기업투자(D-8),Corporate Investment (D-8),Đầu tư doanh nghiệp (D-8),visa,
+D-10,구직(D-10),Job Seeking (D-10),Tìm việc làm (D-10),visa,
+F-2,거주(F-2),Residence (F-2),Cư trú (F-2),visa,
+F-4,재외동포(F-4),Overseas Korean (F-4),Kiều bào Hàn Quốc (F-4),visa,
+F-5,영주(F-5),Permanent Residence (F-5),Thường trú (F-5),visa,
+F-6,결혼이민(F-6),Marriage Migrant (F-6),Kết hôn di trú (F-6),visa,
+H-2,방문취업(H-2),Working Visit (H-2),Thăm thân lao động (H-2),visa,
+FSC,금융위원회,Financial Services Commission,Ủy ban Dịch vụ Tài chính,agency,
+FSS,금융감독원,Financial Supervisory Service,Cơ quan Giám sát Tài chính,agency,상담 1332
+MOJ,법무부,Ministry of Justice,Bộ Tư pháp,agency,
+IMMIGRATION,출입국·외국인청,Immigration Office,Cơ quan Xuất nhập cảnh,agency,외국인종합안내센터 1345
+POLICE,경찰청,Korean National Police Agency,Cơ quan Cảnh sát Quốc gia,agency,신고 112

@@ -1,0 +1,244 @@
+{
+  "FSC-2024-0502-LIMIT": {
+    "bytes": 118015,
+    "content_type": "text/html;charset=UTF-8",
+    "doc_type": "press_release",
+    "fetched_at": "2026-08-11T14:52:34+00:00",
+    "final_url": "https://www.fsc.go.kr/no010101/82205",
+    "http_status": 200,
+    "license_note": "공공누리 제1유형",
+    "priority": "P0",
+    "published_at": "2024-05-02",
+    "publisher": "금융위원회",
+    "publisher_type": "government",
+    "sha256": "f2ccef27aa66aa0c969be94dab9e0e646095ae0599d5d681ceb324e69ccf18fe",
+    "text_chars": 3198,
+    "text_sha256": "e19b3dad41ba9d6710a080d1f8e1b9d31eda78d84118419e71869f129931d1ac",
+    "title": "24.5.2.(목)부터 한도제한계좌의 이체·ATM 거래한도가 30만원에서 100만원으로 상향됩니다",
+    "topics": [
+      "limited_account",
+      "transfer_limit",
+      "account_opening"
+    ],
+    "url": "https://www.fsc.go.kr/no010101/82205",
+    "verified_at": null,
+    "visa_scope": [
+      "ALL"
+    ]
+  },
+  "FSC-2024-0502-LIMIT-PDF": {
+    "bytes": 386209,
+    "content_type": "application/octet-stream",
+    "doc_type": "press_release",
+    "fetched_at": "2026-08-11T14:52:34+00:00",
+    "final_url": "https://www.fsc.go.kr/comm/getFile?srvcId=BBSTY1&upperNo=82205&fileTy=ATTACH&fileNo=1",
+    "http_status": 200,
+    "license_note": "공공누리 제1유형",
+    "priority": "P0",
+    "published_at": "2024-05-02",
+    "publisher": "금융위원회",
+    "publisher_type": "government",
+    "sha256": "48fbf78e3708fabfd170638b086d237f9b8d58a01bd1cf99506eabdce09caac0",
+    "text_chars": 4094,
+    "text_sha256": "fc8ad59988e3f6228c1bef74b56195b5f3c8e125fcc0f40c57051d114001ef6c",
+    "title": "한도제한계좌 거래한도 상향 보도자료 (원문 PDF)",
+    "topics": [
+      "limited_account",
+      "transfer_limit"
+    ],
+    "url": "https://www.fsc.go.kr/comm/getFile?srvcId=BBSTY1&upperNo=82205&fileTy=ATTACH&fileNo=1",
+    "verified_at": null,
+    "visa_scope": [
+      "ALL"
+    ]
+  },
+  "FSC-2025-0321-MOBILE-ARC": {
+    "bytes": 98608,
+    "content_type": "text/html;charset=UTF-8",
+    "doc_type": "press_release",
+    "fetched_at": "2026-08-11T14:52:35+00:00",
+    "final_url": "https://www.fsc.go.kr/no010101/84208",
+    "http_status": 200,
+    "license_note": "공공누리 제1유형",
+    "priority": "P0",
+    "published_at": "2025-03-20",
+    "publisher": "금융위원회",
+    "publisher_type": "government",
+    "sha256": "8c0691af7c735486714ecd1e3711bb7ab093859347f1cc0a0cc88085e575c59d",
+    "text_chars": 1653,
+    "text_sha256": "1ba9387cf1096d7a696e4fef2f5f5f4291690f1664ae637802476e1edfbc9b30",
+    "title": "2025.3.21.(금)부터 6개 은행에서 모바일 외국인등록증으로 계좌개설이 가능합니다",
+    "topics": [
+      "account_opening",
+      "identity_verification",
+      "mobile_arc"
+    ],
+    "url": "https://www.fsc.go.kr/no010101/84208",
+    "verified_at": null,
+    "visa_scope": [
+      "ALL"
+    ]
+  },
+  "FSC-2025-0321-MOBILE-ARC-PDF": {
+    "bytes": 1333901,
+    "content_type": "application/octet-stream",
+    "doc_type": "press_release",
+    "fetched_at": "2026-08-11T14:52:36+00:00",
+    "final_url": "https://www.fsc.go.kr/comm/getFile?srvcId=BBSTY1&upperNo=84208&fileTy=ATTACH&fileNo=1",
+    "http_status": 200,
+    "license_note": "공공누리 제1유형",
+    "priority": "P0",
+    "published_at": "2025-03-20",
+    "publisher": "금융위원회",
+    "publisher_type": "government",
+    "sha256": "be5c6f5b8753aeb77b7a9c09968a19c2480e37c6a1a0b75acb7aed764811ede6",
+    "text_chars": 4144,
+    "text_sha256": "2bf28cec0097fa9d0a0252b2ad6d853e6b2218dfca89e19579281d9ce1bf9549",
+    "title": "모바일 외국인등록증 금융거래 이용 보도자료 (원문 PDF)",
+    "topics": [
+      "account_opening",
+      "identity_verification",
+      "mobile_arc"
+    ],
+    "url": "https://www.fsc.go.kr/comm/getFile?srvcId=BBSTY1&upperNo=84208&fileTy=ATTACH&fileNo=1",
+    "verified_at": null,
+    "visa_scope": [
+      "ALL"
+    ]
+  },
+  "HIKOREA-ARC-DOCS": {
+    "bytes": 50477,
+    "content_type": "text/html; charset=UTF-8",
+    "doc_type": "guideline",
+    "fetched_at": "2026-08-11T14:55:35+00:00",
+    "final_url": "https://www.hikorea.go.kr/info/InfoDatail.pt?CAT_SEQ=177&PARENT_ID=139",
+    "http_status": 200,
+    "license_note": "공공누리",
+    "priority": "P0",
+    "published_at": null,
+    "publisher": "법무부 하이코리아",
+    "publisher_type": "government",
+    "sha256": "50aaf0c7f285326e2f68bb8b7ddc88bb441ef377cf5dc36cf571271bb5480fe2",
+    "text_chars": 1524,
+    "text_sha256": "bd8a8ba68d05d8d811e5368a77029b1808f35b910cacf857624d314ad77fdb4c",
+    "title": "외국인등록시 제출서류",
+    "topics": [
+      "residence",
+      "arc",
+      "registration",
+      "required_docs"
+    ],
+    "url": "https://www.hikorea.go.kr/info/InfoDatail.pt?CAT_SEQ=177&PARENT_ID=139",
+    "verified_at": null,
+    "visa_scope": [
+      "ALL"
+    ]
+  },
+  "HIKOREA-ARC-TARGET": {
+    "bytes": 44113,
+    "content_type": "text/html; charset=UTF-8",
+    "doc_type": "guideline",
+    "fetched_at": "2026-08-11T14:55:35+00:00",
+    "final_url": "https://www.hikorea.go.kr/info/InfoDatail.pt?CAT_SEQ=176&PARENT_ID=139",
+    "http_status": 200,
+    "license_note": "공공누리",
+    "priority": "P0",
+    "published_at": null,
+    "publisher": "법무부 하이코리아",
+    "publisher_type": "government",
+    "sha256": "2a6d9886adee89cc10eb8d37cfeea290e7911ca0cb012bffc050061d183c7cb0",
+    "text_chars": 633,
+    "text_sha256": "26491ec68bc20d58cbbf0de9240945b881e25897e6899cfa0fceada99e75b71b",
+    "title": "외국인등록 대상 및 시기",
+    "topics": [
+      "residence",
+      "arc",
+      "registration"
+    ],
+    "url": "https://www.hikorea.go.kr/info/InfoDatail.pt?CAT_SEQ=176&PARENT_ID=139",
+    "verified_at": null,
+    "visa_scope": [
+      "ALL"
+    ]
+  },
+  "HIKOREA-MOBILE-ARC": {
+    "bytes": 43250,
+    "content_type": "text/html; charset=UTF-8",
+    "doc_type": "guideline",
+    "fetched_at": "2026-08-11T14:55:35+00:00",
+    "final_url": "https://www.hikorea.go.kr/info/InfoDatail.pt?CAT_SEQ=7221&PARENT_ID=139",
+    "http_status": 200,
+    "license_note": "공공누리",
+    "priority": "P0",
+    "published_at": null,
+    "publisher": "법무부 하이코리아",
+    "publisher_type": "government",
+    "sha256": "df411005f7c958b58ee69d7e0c3d50db6d0027af11194c80ad99b9cc8cabfa92",
+    "text_chars": 414,
+    "text_sha256": "94076c7b2432e81e70612df75f10413d09fcdae57f5c842c5d8e58b1a6efbf9f",
+    "title": "모바일 외국인등록증 발급",
+    "topics": [
+      "arc",
+      "mobile_arc",
+      "identity_verification"
+    ],
+    "url": "https://www.hikorea.go.kr/info/InfoDatail.pt?CAT_SEQ=7221&PARENT_ID=139",
+    "verified_at": null,
+    "visa_scope": [
+      "ALL"
+    ]
+  },
+  "KOREA-2024-0502-LIMIT-BRIEF": {
+    "bytes": 171113,
+    "content_type": "text/html;charset=UTF-8",
+    "doc_type": "press_release",
+    "fetched_at": "2026-08-11T14:52:35+00:00",
+    "final_url": "https://www.korea.kr/news/policyNewsView.do?newsId=148928795",
+    "http_status": 200,
+    "license_note": "공공누리 제1유형",
+    "priority": "P0",
+    "published_at": "2024-05-02",
+    "publisher": "대한민국 정책브리핑",
+    "publisher_type": "government",
+    "sha256": "95270d166612058708c0401b78a6b6168a1c76649e67daf2213bfc2f7c5ac5fc",
+    "text_chars": 1605,
+    "text_sha256": "62fb8a80c8c01c4aa55cc800e191428677f9d9875f061c4733f0eaa584c69299",
+    "title": "한도제한계좌 이체·ATM 한도 30만→100만원 상향",
+    "topics": [
+      "limited_account",
+      "transfer_limit"
+    ],
+    "url": "https://www.korea.kr/news/policyNewsView.do?newsId=148928795",
+    "verified_at": null,
+    "visa_scope": [
+      "ALL"
+    ]
+  },
+  "KOREA-2025-0320-MOBILE-ARC-BRIEF": {
+    "bytes": 169858,
+    "content_type": "text/html;charset=UTF-8",
+    "doc_type": "press_release",
+    "fetched_at": "2026-08-11T14:52:37+00:00",
+    "final_url": "https://www.korea.kr/news/policyNewsView.do?newsId=148940798",
+    "http_status": 200,
+    "license_note": "공공누리 제1유형",
+    "priority": "P0",
+    "published_at": "2025-03-20",
+    "publisher": "대한민국 정책브리핑",
+    "publisher_type": "government",
+    "sha256": "fffa3bfd076567555fed74941745f6814d01aee04b3a05f650a11cefb5dbf535",
+    "text_chars": 1141,
+    "text_sha256": "d0192da258563cff95d1a4f71e2b88c1ea172923d036ddd91208137604cc19a6",
+    "title": "모바일 외국인등록증도 은행계좌 개설 등 금융거래 때 인정",
+    "topics": [
+      "account_opening",
+      "identity_verification",
+      "mobile_arc"
+    ],
+    "url": "https://www.korea.kr/news/policyNewsView.do?newsId=148940798",
+    "verified_at": null,
+    "visa_scope": [
+      "ALL"
+    ]
+  }
+}
