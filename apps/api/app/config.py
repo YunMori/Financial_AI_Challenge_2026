@@ -36,8 +36,11 @@ class Settings(BaseSettings):
     llm_max_retries: int = 2
 
     # ── 임베딩 ───────────────────────────────────────────────────────
-    # 문서 임베딩은 빌드 타임, 런타임은 쿼리 1건만. 확정은 Phase 7 실측 후(ADR-003)
-    embed_model: str = "BAAI/bge-m3"
+    # **모델명의 단일 출처.** 색인기(04_index)와 런타임이 같은 값을 봐야 한다.
+    # 계획은 BGE-m3 를 상정했으나 fastembed 가 지원하지 않아 e5-large 로 진행한다
+    # (BGE-m3 는 EMBED_BACKEND=sentence_transformers 필요 — torch).
+    # 확정은 Phase 7 컨테이너 메모리 실측 후 ADR-003.
+    embed_model: str = "intfloat/multilingual-e5-large"
 
     # ── 인덱스 ───────────────────────────────────────────────────────
     chroma_path: Path = REPO_ROOT / "apps" / "api" / "data" / "chroma"
@@ -49,8 +52,22 @@ class Settings(BaseSettings):
     context_top_n: int = 5  # 생성에 넣을 최종 근거 수
     rrf_k: int = 60
     rrf_w_lexical: float = 1.0  # 3주 차 그리드 튜닝 대상
-    threshold_top1: float = 0.42
-    threshold_margin: float = 0.05
+    # 검색 신뢰도 임계값 (planner §6.6).
+    #
+    # planner 원안의 0.42 는 다른 점수 척도를 가정한 값이다. e5 의 코사인
+    # 유사도는 0.76~0.91 구간에 몰리므로 0.42 로는 폴백이 **전혀** 걸리지 않는다.
+    # `python -m app.rag.cli --calibrate` 실측(2026-08-12, 코퍼스 안 8 / 밖 8):
+    #   코퍼스 안  최소 0.8494 / 평균 0.8864
+    #   코퍼스 밖  최대 0.8293 / 평균 0.7960
+    # 두 분포의 중간값을 잠정 채택한다. **분리 폭이 0.02 로 좁으므로
+    # 골든셋(함정 40문항)이 생기면 반드시 다시 잡아야 한다.**
+    threshold_top1: float = 0.839
+    #
+    # margin(1위와 3위의 RRF 차)은 **신뢰도 신호로 쓰지 않는다.** 실측에서
+    # 코퍼스 밖 질의가 오히려 높은 margin 을 냈다 — 두 검색기가 같은 문서를
+    # 고르면 커지는 값이라 "근거가 존재하는가"와 무관하기 때문이다.
+    # 0 은 비활성. 대체 신호는 골든셋과 함께 설계한다.
+    threshold_margin: float = 0.0
     stale_days: int = 90  # verified_at 이 이보다 오래되면 시점 경고
 
     # ── 외부 OpenAPI (M1 범위 밖) ────────────────────────────────────
