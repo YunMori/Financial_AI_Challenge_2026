@@ -1,0 +1,63 @@
+{
+  "common": {
+    "appName": "K-Buddy",
+    "tagline": "Thủ tục tài chính theo tư cách lưu trú của bạn",
+    "next": "Tiếp theo",
+    "back": "Quay lại",
+    "start": "Bắt đầu",
+    "skip": "Bỏ qua",
+    "loading": "Đang tải…"
+  },
+  "legal": {
+    "finalAuthority": "Tổ chức tài chính là bên quyết định cuối cùng. Hãy xác nhận trước khi đến.",
+    "aiDisclosure": "Câu trả lời này do AI tạo ra",
+    "antiPhishingTitle": "Dịch vụ này không bao giờ hỏi số tài khoản hay mật khẩu",
+    "antiPhishingBody": "Ai hỏi những thông tin này là đang lừa đảo. Cảnh sát 112 · FSS 1332",
+    "officialDomain": "Tên miền chính thức",
+    "domainUnset": "(đặt khi triển khai)"
+  },
+  "onboarding": {
+    "chooseLanguage": "Chọn ngôn ngữ của bạn",
+    "profileTitle": "Cá nhân hóa hướng dẫn",
+    "profileSubtitle": "Tùy chọn. Bạn vẫn nhận được hướng dẫn chung nếu bỏ qua.",
+    "noStorage": "Thông tin chỉ lưu trong trình duyệt này và bị xóa ngay sau mỗi yêu cầu.",
+    "visa": "Tư cách lưu trú",
+    "stay": "Thời gian lưu trú",
+    "purpose": "Mục đích giao dịch",
+    "nationality": "Quốc tịch",
+    "unselected": "Chưa chọn"
+  },
+  "stay": {
+    "under_6m": "Dưới 6 tháng",
+    "6m_12m": "6 tháng đến 1 năm",
+    "1y_2y": "1 đến 2 năm",
+    "over_2y": "Trên 2 năm"
+  },
+  "purpose": {
+    "salary": "Nhận lương",
+    "tuition": "Học phí",
+    "living": "Chi phí sinh hoạt",
+    "remittance": "Chuyển tiền",
+    "business": "Kinh doanh"
+  },
+  "chat": {
+    "title": "Bạn muốn biết điều gì?",
+    "placeholder": "VD: Cần giấy tờ gì để bỏ hạn mức tài khoản?",
+    "send": "Hỏi",
+    "thinking": "Đang tra cứu quy định liên quan…",
+    "sources": "Nguồn",
+    "published": "Ban hành",
+    "verified": "Xác minh",
+    "viewOriginal": "Xem bản gốc",
+    "staleWarning": "Thông tin này đã được xác minh cách đây hơn 3 tháng",
+    "error": "Sự cố kết nối. Vui lòng thử lại sau.",
+    "examples": "Thử hỏi"
+  },
+  "tier": {
+    "aLabel": "Dựa trên nguồn chính thức",
+    "bLabel": "Hướng dẫn chung",
+    "bNotice": "Yêu cầu khác nhau tùy tổ chức. Hãy xác nhận trước khi đến.",
+    "cLabel": "Chúng tôi không thể trả lời",
+    "cNotice": "Chỉ tổ chức tài chính mới cho biết kết quả thẩm định cá nhân."
+  }
+}
