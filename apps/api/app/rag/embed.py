@@ -102,8 +102,15 @@ def get_embedder(model_name: str | None = None, backend: str | None = None) -> E
 
     런타임에서는 쿼리 1건만 임베딩한다. 문서 임베딩은 빌드 타임(04_index)에
     끝내 Chroma 에 넣고 이미지에 동봉하므로, 서버는 추론만 한다.
+
+    모델명의 **단일 출처는 `app.config.Settings`** 다. 여기서 따로 기본값을
+    두면 색인기와 런타임이 다른 모델을 쓰는 사고가 난다(실제로 겪음 —
+    dev-log 2026-08-12 참조). 벡터 공간이 어긋나면 에러 없이 검색만 무너진다.
     """
-    model_name = model_name or os.getenv("EMBED_MODEL", "intfloat/multilingual-e5-large")
+    from app.config import get_settings
+
+    settings = get_settings()
+    model_name = model_name or settings.embed_model
     backend = backend or os.getenv("EMBED_BACKEND", "fastembed")
     if backend == "sentence_transformers":
         return SentenceTransformersBackend(model_name)

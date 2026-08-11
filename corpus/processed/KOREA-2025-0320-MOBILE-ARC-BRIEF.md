@@ -6,7 +6,7 @@ publisher_type: government
 doc_type: press_release
 source_url: https://www.korea.kr/news/policyNewsView.do?newsId=148940798
 published_at: '2025-03-20'
-verified_at: null
+verified_at: '2026-08-12'
 sha256: fffa3bfd076567555fed74941745f6814d01aee04b3a05f650a11cefb5dbf535
 text_sha256: d0192da258563cff95d1a4f71e2b88c1ea172923d036ddd91208137604cc19a6
 license_note: 공공누리 제1유형

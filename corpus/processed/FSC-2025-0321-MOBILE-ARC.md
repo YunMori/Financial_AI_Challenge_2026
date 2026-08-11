@@ -6,7 +6,7 @@ publisher_type: government
 doc_type: press_release
 source_url: https://www.fsc.go.kr/no010101/84208
 published_at: '2025-03-20'
-verified_at: null
+verified_at: '2026-08-12'
 sha256: 8c0691af7c735486714ecd1e3711bb7ab093859347f1cc0a0cc88085e575c59d
 text_sha256: 1ba9387cf1096d7a696e4fef2f5f5f4291690f1664ae637802476e1edfbc9b30
 license_note: 공공누리 제1유형

@@ -6,7 +6,7 @@ publisher_type: government
 doc_type: guideline
 source_url: https://www.hikorea.go.kr/info/InfoDatail.pt?CAT_SEQ=177&PARENT_ID=139
 published_at: null
-verified_at: null
+verified_at: '2026-08-12'
 sha256: 50aaf0c7f285326e2f68bb8b7ddc88bb441ef377cf5dc36cf571271bb5480fe2
 text_sha256: bd8a8ba68d05d8d811e5368a77029b1808f35b910cacf857624d314ad77fdb4c
 license_note: 공공누리
