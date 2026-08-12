@@ -14,35 +14,7 @@ sources:
 
   # ── P0: 한도제한계좌 (데모 시나리오 2의 핵심 근거) ──────────────────
 
-  - doc_id: FSC-2024-0502-LIMIT
-    url: https://www.fsc.go.kr/no010101/82205
-    title: 24.5.2.(목)부터 한도제한계좌의 이체·ATM 거래한도가 30만원에서 100만원으로 상향됩니다
-    publisher: 금융위원회
-    publisher_type: government
-    doc_type: press_release
-    published_at: "2024-05-02"
-    topics: [limited_account, transfer_limit, account_opening]
-    visa_scope: [ALL]
-    license_note: 공공누리 제1유형
-    priority: P0
-    note: >-
-      부록 B2 의 1차 출처. 기획서는 "1일 한도 100만원"이라고만 서술했으나
-      실제로는 전자금융·ATM 이 100만원이고 창구거래는 300만원이다.
-      데모 시나리오 2("왜 100만원까지만 보낼 수 있나요")는 전자금융 맥락이라
-      100만원이 맞지만, 기획서 문구는 거래유형을 명시해야 한다.
 
-  - doc_id: FSC-2024-0502-LIMIT-PDF
-    url: https://www.fsc.go.kr/comm/getFile?srvcId=BBSTY1&upperNo=82205&fileTy=ATTACH&fileNo=1
-    title: 한도제한계좌 거래한도 상향 보도자료 (원문 PDF)
-    publisher: 금융위원회
-    publisher_type: government
-    doc_type: press_release
-    published_at: "2024-05-02"
-    topics: [limited_account, transfer_limit]
-    visa_scope: [ALL]
-    license_note: 공공누리 제1유형
-    priority: P0
-    note: HTML 본문보다 상세한 표가 들어 있다. pdfplumber 경로 검증도 겸한다.
 
   - doc_id: KOREA-2024-0502-LIMIT-BRIEF
     url: https://www.korea.kr/news/policyNewsView.do?newsId=148928795
@@ -148,6 +120,156 @@ sources:
     note: 발급 절차 쪽 1차 출처. 금융 이용 개시일(2025.3.21)은 금융위 보도자료가 정본.
 
 
+  # ── P0: 계좌개설 요건 · 거래목적 확인 의무 ──────────────────────────
+
+  - doc_id: FSC-2024-0201-PURPOSE-LAW
+    url: https://www.fsc.go.kr/no010101/81640
+    title: 계좌개설 시 금융거래 목적 확인 의무화 (통신사기피해환급법 개정)
+    publisher: 금융위원회
+    publisher_type: government
+    doc_type: press_release
+    topics: [account_opening, transaction_purpose, limited_account]
+    visa_scope: [ALL]
+    license_note: 공공누리 제1유형
+    priority: P0
+    note: >-
+      부록 B3 의 1차 출처. 2024-02-27 공포 / 2024-08-28 시행.
+      증빙이 불충분하면 한도제한계좌로 개설된다는 근거가 여기 있다.
+
+  - doc_id: FSC-2024-0201-PURPOSE-LAW-PDF
+    url: https://www.fsc.go.kr/comm/getFile?srvcId=BBSTY1&upperNo=81640&fileTy=ATTACH&fileNo=1
+    title: 금융거래 목적 확인 의무화 보도자료 (원문 PDF)
+    publisher: 금융위원회
+    publisher_type: government
+    doc_type: press_release
+    topics: [account_opening, transaction_purpose]
+    visa_scope: [ALL]
+    license_note: 공공누리 제1유형
+    priority: P0
+
+  - doc_id: FSC-PURPOSE-ENFORCEMENT-DECREE
+    url: https://www.fsc.go.kr/no010101/82912
+    title: 통신사기피해환급법 시행령 개정안 국무회의 통과
+    publisher: 금융위원회
+    publisher_type: government
+    doc_type: press_release
+    topics: [account_opening, transaction_purpose, voice_phishing]
+    visa_scope: [ALL]
+    license_note: 공공누리 제1유형
+    priority: P0
+
+  - doc_id: FSC-ACCOUNT-OPENING-PRACTICE
+    url: https://www.fsc.go.kr/po010101/80539
+    title: 계좌개설 거절 관행 개선 (20영업일 제한 등)
+    publisher: 금융위원회
+    publisher_type: government
+    doc_type: press_release
+    topics: [account_opening, limited_account]
+    visa_scope: [ALL]
+    license_note: 공공누리 제1유형
+    priority: P0
+    note: 계좌개설 후 20영업일 이내 재개설 거절 관행 — 외국인이 자주 겪는 지점
+
+  - doc_id: FSC-NONFACE-BLOCK
+    url: https://www.fsc.go.kr/no010101/84123
+    title: 비대면 계좌개설 안심차단 서비스
+    publisher: 금융위원회
+    publisher_type: government
+    doc_type: press_release
+    topics: [account_opening, non_face_to_face, voice_phishing]
+    visa_scope: [ALL]
+    license_note: 공공누리 제1유형
+    priority: P0
+
+
+  # ── P0: 보이스피싱 대응 (F8 근거 + 계층 C 폴백 시연) ────────────────
+
+
+    note: 지급정지 → 112 신고 → 피해구제 신청 순서. F8 대응 절차의 근거
+
+  - doc_id: FSC-2024-PHISHING-112
+    url: https://www.fsc.go.kr/no010101/80830
+    title: 보이스피싱, 이제 112로 신고하세요
+    publisher: 금융위원회
+    publisher_type: government
+    doc_type: press_release
+    topics: [voice_phishing]
+    visa_scope: [ALL]
+    license_note: 공공누리 제1유형
+    priority: P0
+
+  - doc_id: FSC-PHISHING-FACE-TO-FACE
+    url: https://www.fsc.go.kr/no010101/81090
+    title: 대면편취형 보이스피싱도 피해구제 대상에 포함
+    publisher: 금융위원회
+    publisher_type: government
+    doc_type: press_release
+    topics: [voice_phishing, refund]
+    visa_scope: [ALL]
+    license_note: 공공누리 제1유형
+    priority: P0
+
+  - doc_id: KOREA-PHISHING-GUIDE
+    url: https://www.korea.kr/news/policyNewsView.do?newsId=148933209
+    title: 보이스피싱 예방과 피해구제 신청 방법
+    publisher: 대한민국 정책브리핑
+    publisher_type: government
+    doc_type: guideline
+    topics: [voice_phishing, refund]
+    visa_scope: [ALL]
+    license_note: 공공누리 제1유형
+    priority: P0
+    note: 2차 자료. 절차를 한 흐름으로 서술해 검색 회수에 유리하다
+
+  # ── P0: 체류자격 (하이코리아 탭 단위) ───────────────────────────────
+
+  - doc_id: HIKOREA-STAY-DETAIL
+    url: https://www.hikorea.go.kr/info/InfoDatail.pt?CAT_SEQ=170&PARENT_ID=19
+    title: 취업활동 가능 체류자격 안내
+    publisher: 법무부 하이코리아
+    publisher_type: government
+    doc_type: guideline
+    topics: [residence, visa_status, employment]
+    visa_scope: [ALL]
+    license_note: 공공누리
+    priority: P0
+    note: 자격별 취업 가능 업종·근무처 제한. F1 의 12종 서술 근거
+
+  - doc_id: HIKOREA-ARC-ISSUE
+    url: https://www.hikorea.go.kr/info/InfoDatail.pt?CAT_SEQ=178&PARENT_ID=139
+    title: 외국인등록증 발급·재발급·교부
+    publisher: 법무부 하이코리아
+    publisher_type: government
+    doc_type: guideline
+    topics: [arc, registration]
+    visa_scope: [ALL]
+    license_note: 공공누리
+    priority: P0
+
+  - doc_id: HIKOREA-ARC-RETURN
+    url: https://www.hikorea.go.kr/info/InfoDatail.pt?CAT_SEQ=179&PARENT_ID=139
+    title: 외국인등록증 반납·휴대·제시
+    publisher: 법무부 하이코리아
+    publisher_type: government
+    doc_type: guideline
+    topics: [arc, registration]
+    visa_scope: [ALL]
+    license_note: 공공누리
+    priority: P0
+
+  - doc_id: HIKOREA-ARC-CHANGE
+    url: https://www.hikorea.go.kr/info/InfoDatail.pt?CAT_SEQ=180&PARENT_ID=139
+    title: 외국인등록사항 변경신고
+    publisher: 법무부 하이코리아
+    publisher_type: government
+    doc_type: guideline
+    topics: [arc, registration]
+    visa_scope: [ALL]
+    license_note: 공공누리
+    priority: P0
+    note: 15일 이내 신고 의무. 미신고 시 과태료 — 이용자가 실제로 겪는 지점
+
+
   # ── P1 이후 (M1 범위 밖, 목록만 확보) ───────────────────────────────
   #
   # B4·B5(ORIS 정식가동, 연 5만 달러 무증빙 한도)는 F6 의 근거이며
@@ -159,3 +281,48 @@ sources:
   #   title: 외국인 해외송금 무증빙 한도 연 5만 달러 확대
   #   publisher: 기획재정부
   #   priority: P1
+
+  - doc_id: FSC-2024-0502-LIMIT-GUIDE
+    url: https://www.fsc.go.kr/comm/getFile?srvcId=BBSTY1&upperNo=82205&fileTy=ATTACH&fileNo=2
+    title: 금융거래 목적별 증빙서류 안내장 (한도제한계좌 해제)
+    publisher: 금융위원회
+    publisher_type: government
+    doc_type: guideline
+    published_at: '2024-05-02'
+    topics: [limited_account, documents]
+    visa_scope: [ALL]
+    license_note: 공공누리 제1유형
+    priority: P0
+    note: >-
+      F4 의 핵심 근거. 목적별 대표 증빙서류가 표로 정리돼 있다.
+      본문(82205)이 참조하는 별첨이며 서류 목록은 여기에만 있다.
+
+  - doc_id: FSC-ACCOUNT-OPENING-PRACTICE-PDF
+    url: https://www.fsc.go.kr/comm/getFile?srvcId=BBSTY1&upperNo=80539&fileTy=ATTACH&fileNo=1
+    title: 규제심판부 「신규계좌 이체·출금 제한 합리적 개선」 권고
+    publisher: 금융위원회
+    publisher_type: government
+    doc_type: press_release
+    published_at: '2023-08-08'
+    topics: [account_opening, limited_account]
+    visa_scope: [ALL]
+    license_note: 공공누리 제1유형
+    priority: P0
+    note: 한도제한계좌가 '그림자 규제'로 지적된 경위. 제도의 근거와 한계를 함께 담는다.
+
+  - doc_id: KFB-LIMIT-ACCOUNT
+    url: https://portal.kfb.or.kr/voice/vphishing_system3.php
+    title: 한도제한계좌 안내 (전국은행연합회 소비자포털)
+    publisher: 전국은행연합회
+    publisher_type: fsi
+    doc_type: faq
+    topics: [limited_account]
+    visa_scope: [ALL]
+    priority: P0
+    legacy_tls: true
+    allow_short: true
+    note: >-
+      본문 312자로 짧지만 추출 실패가 아니라 원문이 짧은 FAQ 다(3문장 완결).
+      "인출·이체한도, 서류·절차, 일반계좌 전환요건은 은행마다 상이하므로 이용하는
+      은행에 문의" — institutions.yaml 의 은행별 셀을 unknown 으로 두는 **공식 근거**라
+      길이와 무관하게 가치가 크다. 이 페이지는 EUC-KR/UTF-8 혼합 인코딩이다.

@@ -1,55 +1,104 @@
 {
-  "FSC-2024-0502-LIMIT": {
-    "bytes": 118015,
+  "FSC-2024-0201-PURPOSE-LAW": {
+    "bytes": 104394,
     "content_type": "text/html;charset=UTF-8",
     "doc_type": "press_release",
-    "fetched_at": "2026-08-11T14:52:34+00:00",
-    "final_url": "https://www.fsc.go.kr/no010101/82205",
+    "fetched_at": "2026-08-12T03:41:51+00:00",
+    "final_url": "https://www.fsc.go.kr/no010101/81640",
     "http_status": 200,
     "license_note": "공공누리 제1유형",
     "priority": "P0",
-    "published_at": "2024-05-02",
+    "published_at": "2024-02-01",
     "publisher": "금융위원회",
     "publisher_type": "government",
-    "sha256": "f2ccef27aa66aa0c969be94dab9e0e646095ae0599d5d681ceb324e69ccf18fe",
-    "text_chars": 3198,
-    "text_sha256": "e19b3dad41ba9d6710a080d1f8e1b9d31eda78d84118419e71869f129931d1ac",
-    "title": "24.5.2.(목)부터 한도제한계좌의 이체·ATM 거래한도가 30만원에서 100만원으로 상향됩니다",
+    "sha256": "81cf74c4d2a2efe75443cfaa72d927b1cf5aea2b4bee22875b2a259c64df335d",
+    "text_chars": 1726,
+    "text_sha256": "f55c53a2f122e483440f11fce2aa47edfd629c5d3268fa762604ee2848acd743",
+    "title": "계좌개설 시 금융거래 목적 확인 의무화 (통신사기피해환급법 개정)",
     "topics": [
-      "limited_account",
-      "transfer_limit",
-      "account_opening"
+      "account_opening",
+      "transaction_purpose",
+      "limited_account"
     ],
-    "url": "https://www.fsc.go.kr/no010101/82205",
+    "url": "https://www.fsc.go.kr/no010101/81640",
     "verified_at": "2026-08-12",
-    "verified_method": "정제본 본문 확인 + 핵심 수치 원문 교차 확인",
     "visa_scope": [
       "ALL"
     ]
   },
-  "FSC-2024-0502-LIMIT-PDF": {
-    "bytes": 386209,
+  "FSC-2024-0201-PURPOSE-LAW-PDF": {
+    "bytes": 343447,
     "content_type": "application/octet-stream",
     "doc_type": "press_release",
-    "fetched_at": "2026-08-11T14:52:34+00:00",
-    "final_url": "https://www.fsc.go.kr/comm/getFile?srvcId=BBSTY1&upperNo=82205&fileTy=ATTACH&fileNo=1",
+    "fetched_at": "2026-08-12T03:41:52+00:00",
+    "final_url": "https://www.fsc.go.kr/comm/getFile?srvcId=BBSTY1&upperNo=81640&fileTy=ATTACH&fileNo=1",
+    "http_status": 200,
+    "license_note": "공공누리 제1유형",
+    "priority": "P0",
+    "published_at": "2024-02-01",
+    "publisher": "금융위원회",
+    "publisher_type": "government",
+    "sha256": "a29d9d9ed0be1736e24107fa5b3998b490e991d2b9bc119cc1d9ab3e38a743fa",
+    "text_chars": 2440,
+    "text_sha256": "b7026707f4f65723d83a40b3a17881d6a6ec1424cc89addcf5001f67303acf4f",
+    "title": "금융거래 목적 확인 의무화 보도자료 (원문 PDF)",
+    "topics": [
+      "account_opening",
+      "transaction_purpose"
+    ],
+    "url": "https://www.fsc.go.kr/comm/getFile?srvcId=BBSTY1&upperNo=81640&fileTy=ATTACH&fileNo=1",
+    "verified_at": "2026-08-12",
+    "visa_scope": [
+      "ALL"
+    ]
+  },
+  "FSC-2024-0502-LIMIT-GUIDE": {
+    "bytes": 638976,
+    "content_type": "application/octet-stream",
+    "doc_type": "guideline",
+    "fetched_at": "2026-08-12T03:55:20+00:00",
+    "final_url": "https://www.fsc.go.kr/comm/getFile?srvcId=BBSTY1&upperNo=82205&fileTy=ATTACH&fileNo=2",
     "http_status": 200,
     "license_note": "공공누리 제1유형",
     "priority": "P0",
     "published_at": "2024-05-02",
     "publisher": "금융위원회",
     "publisher_type": "government",
-    "sha256": "48fbf78e3708fabfd170638b086d237f9b8d58a01bd1cf99506eabdce09caac0",
-    "text_chars": 4094,
-    "text_sha256": "fc8ad59988e3f6228c1bef74b56195b5f3c8e125fcc0f40c57051d114001ef6c",
-    "title": "한도제한계좌 거래한도 상향 보도자료 (원문 PDF)",
+    "sha256": "a3b1f7620cdb10e8af30288d2b1208fbe194f8a699458d9dfbf4e7353ca91a4e",
+    "text_chars": 3865,
+    "text_sha256": "c048afd75ce65137f691ef73c6810a77f5b3db17b8de69d9707f08b048fda481",
+    "title": "금융거래 목적별 증빙서류 안내장 (한도제한계좌 해제)",
     "topics": [
       "limited_account",
-      "transfer_limit"
+      "documents"
     ],
-    "url": "https://www.fsc.go.kr/comm/getFile?srvcId=BBSTY1&upperNo=82205&fileTy=ATTACH&fileNo=1",
+    "url": "https://www.fsc.go.kr/comm/getFile?srvcId=BBSTY1&upperNo=82205&fileTy=ATTACH&fileNo=2",
     "verified_at": "2026-08-12",
-    "verified_method": "정제본 본문 확인 + 핵심 수치 원문 교차 확인",
+    "visa_scope": [
+      "ALL"
+    ]
+  },
+  "FSC-2024-PHISHING-112": {
+    "bytes": 99424,
+    "content_type": "text/html;charset=UTF-8",
+    "doc_type": "press_release",
+    "fetched_at": "2026-08-12T03:42:37+00:00",
+    "final_url": "https://www.fsc.go.kr/no010101/80830",
+    "http_status": 200,
+    "license_note": "공공누리 제1유형",
+    "priority": "P0",
+    "published_at": "2023-09-26",
+    "publisher": "금융위원회",
+    "publisher_type": "government",
+    "sha256": "ef96414862ce6609c044067974d29f5276b09f62317565ecf3634d63fec39618",
+    "text_chars": 2124,
+    "text_sha256": "165b0fe2031c3e77cf52d24980bf361673b5b1ca98244ebdb7f954b058d5109b",
+    "title": "보이스피싱, 이제 112로 신고하세요",
+    "topics": [
+      "voice_phishing"
+    ],
+    "url": "https://www.fsc.go.kr/no010101/80830",
+    "verified_at": "2026-08-12",
     "visa_scope": [
       "ALL"
     ]
@@ -110,6 +159,164 @@
       "ALL"
     ]
   },
+  "FSC-ACCOUNT-OPENING-PRACTICE": {
+    "bytes": 131060,
+    "content_type": "text/html;charset=UTF-8",
+    "doc_type": "press_release",
+    "fetched_at": "2026-08-12T03:41:54+00:00",
+    "final_url": "https://www.fsc.go.kr/po010101/80539",
+    "http_status": 200,
+    "license_note": "공공누리 제1유형",
+    "priority": "P0",
+    "published_at": "2023-08-08",
+    "publisher": "금융위원회",
+    "publisher_type": "government",
+    "sha256": "9c5306436de8de3ce696a5434211b3cfb9f02d65f5077c590d9f5b446a2c14e4",
+    "text_chars": 3467,
+    "text_sha256": "46b1e2a449ca06936bde778feeb169a388d854decdcfb57a29f478768d3df326",
+    "title": "계좌개설 거절 관행 개선 (20영업일 제한 등)",
+    "topics": [
+      "account_opening",
+      "limited_account"
+    ],
+    "url": "https://www.fsc.go.kr/po010101/80539",
+    "verified_at": "2026-08-12",
+    "visa_scope": [
+      "ALL"
+    ]
+  },
+  "FSC-ACCOUNT-OPENING-PRACTICE-PDF": {
+    "bytes": 459544,
+    "content_type": "application/octet-stream",
+    "doc_type": "press_release",
+    "fetched_at": "2026-08-12T03:55:21+00:00",
+    "final_url": "https://www.fsc.go.kr/comm/getFile?srvcId=BBSTY1&upperNo=80539&fileTy=ATTACH&fileNo=1",
+    "http_status": 200,
+    "license_note": "공공누리 제1유형",
+    "priority": "P0",
+    "published_at": "2023-08-08",
+    "publisher": "금융위원회",
+    "publisher_type": "government",
+    "sha256": "740891d4604f67f6d8cfcce72af65044b5c52d401ca6ad8387eee92cd6442a6e",
+    "text_chars": 5098,
+    "text_sha256": "4eda238ab7ef84d1ec53e4375118996f12c733319a679494bc9bc4a4b120953c",
+    "title": "규제심판부 「신규계좌 이체·출금 제한 합리적 개선」 권고",
+    "topics": [
+      "account_opening",
+      "limited_account"
+    ],
+    "url": "https://www.fsc.go.kr/comm/getFile?srvcId=BBSTY1&upperNo=80539&fileTy=ATTACH&fileNo=1",
+    "verified_at": "2026-08-12",
+    "visa_scope": [
+      "ALL"
+    ]
+  },
+  "FSC-NONFACE-BLOCK": {
+    "bytes": 108757,
+    "content_type": "text/html;charset=UTF-8",
+    "doc_type": "press_release",
+    "fetched_at": "2026-08-12T03:41:55+00:00",
+    "final_url": "https://www.fsc.go.kr/no010101/84123",
+    "http_status": 200,
+    "license_note": "공공누리 제1유형",
+    "priority": "P0",
+    "published_at": "2025-03-12",
+    "publisher": "금융위원회",
+    "publisher_type": "government",
+    "sha256": "89f5d4e26b2963fb77538fa3e28bf4adf900948cacca19c3c6b155f58b995ba2",
+    "text_chars": 3565,
+    "text_sha256": "24963c6203b9e48a64475428fe372ab42febb5909a55ed9e2d01009c89915aab",
+    "title": "비대면 계좌개설 안심차단 서비스",
+    "topics": [
+      "account_opening",
+      "non_face_to_face",
+      "voice_phishing"
+    ],
+    "url": "https://www.fsc.go.kr/no010101/84123",
+    "verified_at": "2026-08-12",
+    "visa_scope": [
+      "ALL"
+    ]
+  },
+  "FSC-PHISHING-FACE-TO-FACE": {
+    "bytes": 98281,
+    "content_type": "text/html;charset=UTF-8",
+    "doc_type": "press_release",
+    "fetched_at": "2026-08-12T03:42:38+00:00",
+    "final_url": "https://www.fsc.go.kr/no010101/81090",
+    "http_status": 200,
+    "license_note": "공공누리 제1유형",
+    "priority": "P0",
+    "published_at": "2023-11-16",
+    "publisher": "금융위원회",
+    "publisher_type": "government",
+    "sha256": "285cdf96b7faf959c218b7218a70472ff1b5bf1d317fcea2b20555d23c98d7b8",
+    "text_chars": 1346,
+    "text_sha256": "4ec9b82b4fccb97fc6462dbe6d476492ea219baaf9fec051b8115c200b11260a",
+    "title": "대면편취형 보이스피싱도 피해구제 대상에 포함",
+    "topics": [
+      "voice_phishing",
+      "refund"
+    ],
+    "url": "https://www.fsc.go.kr/no010101/81090",
+    "verified_at": "2026-08-12",
+    "visa_scope": [
+      "ALL"
+    ]
+  },
+  "FSC-PURPOSE-ENFORCEMENT-DECREE": {
+    "bytes": 104604,
+    "content_type": "text/html;charset=UTF-8",
+    "doc_type": "press_release",
+    "fetched_at": "2026-08-12T03:41:53+00:00",
+    "final_url": "https://www.fsc.go.kr/no010101/82912",
+    "http_status": 200,
+    "license_note": "공공누리 제1유형",
+    "priority": "P0",
+    "published_at": "2024-08-19",
+    "publisher": "금융위원회",
+    "publisher_type": "government",
+    "sha256": "62aa3cfd9fd332a55bbd3665461b7d3ee892e5d733ae84c95979b418c32d327a",
+    "text_chars": 2335,
+    "text_sha256": "fff2ccf1ac093a9541a9aeaca88b5bbb39816bd4f0fb36be600ce23a762e4a44",
+    "title": "통신사기피해환급법 시행령 개정안 국무회의 통과",
+    "topics": [
+      "account_opening",
+      "transaction_purpose",
+      "voice_phishing"
+    ],
+    "url": "https://www.fsc.go.kr/no010101/82912",
+    "verified_at": "2026-08-12",
+    "visa_scope": [
+      "ALL"
+    ]
+  },
+  "HIKOREA-ARC-CHANGE": {
+    "bytes": 44684,
+    "content_type": "text/html; charset=UTF-8",
+    "doc_type": "guideline",
+    "fetched_at": "2026-08-12T03:42:40+00:00",
+    "final_url": "https://www.hikorea.go.kr/info/InfoDatail.pt?CAT_SEQ=180&PARENT_ID=139",
+    "http_status": 200,
+    "license_note": "공공누리",
+    "priority": "P0",
+    "published_at": null,
+    "publisher": "법무부 하이코리아",
+    "publisher_type": "government",
+    "sha256": "f144c5ca3ddeed56ce7ecc5b4e797ed5d457f2d8f6a2e7d2bd1ad3770f7f8b27",
+    "text_chars": 770,
+    "text_sha256": "0904307d264a9058f0314339c284581bdb2b3bddc2941dc312d0cd8136cd1908",
+    "title": "외국인등록사항 변경신고",
+    "topics": [
+      "arc",
+      "registration"
+    ],
+    "url": "https://www.hikorea.go.kr/info/InfoDatail.pt?CAT_SEQ=180&PARENT_ID=139",
+    "verified_at": "2026-08-12",
+    "visa_scope": [
+      "ALL"
+    ]
+  },
   "HIKOREA-ARC-DOCS": {
     "bytes": 50477,
     "content_type": "text/html; charset=UTF-8",
@@ -139,6 +346,58 @@
       "ALL"
     ]
   },
+  "HIKOREA-ARC-ISSUE": {
+    "bytes": 43339,
+    "content_type": "text/html; charset=UTF-8",
+    "doc_type": "guideline",
+    "fetched_at": "2026-08-12T03:42:39+00:00",
+    "final_url": "https://www.hikorea.go.kr/info/InfoDatail.pt?CAT_SEQ=178&PARENT_ID=139",
+    "http_status": 200,
+    "license_note": "공공누리",
+    "priority": "P0",
+    "published_at": "2021-04-13",
+    "publisher": "법무부 하이코리아",
+    "publisher_type": "government",
+    "sha256": "55097a1b97d2326352e9c4de56b423795601330181e5524ebac5baedfe1bf02d",
+    "text_chars": 437,
+    "text_sha256": "32a6b65f9b4530f63fd05a9ba5a6c2130e52633771b6b063c31e4708e045118f",
+    "title": "외국인등록증 발급·재발급·교부",
+    "topics": [
+      "arc",
+      "registration"
+    ],
+    "url": "https://www.hikorea.go.kr/info/InfoDatail.pt?CAT_SEQ=178&PARENT_ID=139",
+    "verified_at": "2026-08-12",
+    "visa_scope": [
+      "ALL"
+    ]
+  },
+  "HIKOREA-ARC-RETURN": {
+    "bytes": 44075,
+    "content_type": "text/html; charset=UTF-8",
+    "doc_type": "guideline",
+    "fetched_at": "2026-08-12T03:42:40+00:00",
+    "final_url": "https://www.hikorea.go.kr/info/InfoDatail.pt?CAT_SEQ=179&PARENT_ID=139",
+    "http_status": 200,
+    "license_note": "공공누리",
+    "priority": "P0",
+    "published_at": "2021-04-14",
+    "publisher": "법무부 하이코리아",
+    "publisher_type": "government",
+    "sha256": "9b29f909c1f4e2b926c71554f76e754e3f128bd6f1c378451c15a0db055b5c46",
+    "text_chars": 755,
+    "text_sha256": "f58ba9f1eac024c6e1b9727f3f02d67ff60a4c6cc14f2c06118f1196af132abf",
+    "title": "외국인등록증 반납·휴대·제시",
+    "topics": [
+      "arc",
+      "registration"
+    ],
+    "url": "https://www.hikorea.go.kr/info/InfoDatail.pt?CAT_SEQ=179&PARENT_ID=139",
+    "verified_at": "2026-08-12",
+    "visa_scope": [
+      "ALL"
+    ]
+  },
   "HIKOREA-ARC-TARGET": {
     "bytes": 44113,
     "content_type": "text/html; charset=UTF-8",
@@ -148,7 +407,7 @@
     "http_status": 200,
     "license_note": "공공누리",
     "priority": "P0",
-    "published_at": null,
+    "published_at": "2021-04-13",
     "publisher": "법무부 하이코리아",
     "publisher_type": "government",
     "sha256": "2a6d9886adee89cc10eb8d37cfeea290e7911ca0cb012bffc050061d183c7cb0",
@@ -176,7 +435,7 @@
     "http_status": 200,
     "license_note": "공공누리",
     "priority": "P0",
-    "published_at": null,
+    "published_at": "2024-10-04",
     "publisher": "법무부 하이코리아",
     "publisher_type": "government",
     "sha256": "df411005f7c958b58ee69d7e0c3d50db6d0027af11194c80ad99b9cc8cabfa92",
@@ -195,6 +454,58 @@
       "ALL"
     ]
   },
+  "HIKOREA-STAY-DETAIL": {
+    "bytes": 43749,
+    "content_type": "text/html; charset=UTF-8",
+    "doc_type": "guideline",
+    "fetched_at": "2026-08-12T03:42:39+00:00",
+    "final_url": "https://www.hikorea.go.kr/info/InfoDatail.pt?CAT_SEQ=170&PARENT_ID=19",
+    "http_status": 200,
+    "license_note": "공공누리",
+    "priority": "P0",
+    "published_at": "2021-04-13",
+    "publisher": "법무부 하이코리아",
+    "publisher_type": "government",
+    "sha256": "c68abb189c21a111ccaca368aebeb5e6aa10a89b45148d52317ef1536eb6688e",
+    "text_chars": 889,
+    "text_sha256": "3df1f746c92a8b2a86f0d66ef4885bf5e5e009cf881bcf7e50231314ef020831",
+    "title": "취업활동 가능 체류자격 안내",
+    "topics": [
+      "residence",
+      "visa_status",
+      "employment"
+    ],
+    "url": "https://www.hikorea.go.kr/info/InfoDatail.pt?CAT_SEQ=170&PARENT_ID=19",
+    "verified_at": "2026-08-12",
+    "visa_scope": [
+      "ALL"
+    ]
+  },
+  "KFB-LIMIT-ACCOUNT": {
+    "bytes": 25372,
+    "content_type": "text/html; charset=euc-kr",
+    "doc_type": "faq",
+    "fetched_at": "2026-08-12T03:55:22+00:00",
+    "final_url": "https://portal.kfb.or.kr/voice/vphishing_system3.php",
+    "http_status": 200,
+    "license_note": "",
+    "priority": "P0",
+    "published_at": null,
+    "publisher": "전국은행연합회",
+    "publisher_type": "fsi",
+    "sha256": "feffb39b9e904494d728c5f72a67a0fd95c5584db2c46851a58348b95ef56aa9",
+    "text_chars": 312,
+    "text_sha256": "8837ea6484e3fc455bc657d87590901cbcb91ae0646431d783b7e5794ef56ddb",
+    "title": "한도제한계좌 안내 (전국은행연합회 소비자포털)",
+    "topics": [
+      "limited_account"
+    ],
+    "url": "https://portal.kfb.or.kr/voice/vphishing_system3.php",
+    "verified_at": "2026-08-12",
+    "visa_scope": [
+      "ALL"
+    ]
+  },
   "KOREA-2024-0502-LIMIT-BRIEF": {
     "bytes": 171113,
     "content_type": "text/html;charset=UTF-8",
@@ -208,8 +519,8 @@
     "publisher": "대한민국 정책브리핑",
     "publisher_type": "government",
     "sha256": "95270d166612058708c0401b78a6b6168a1c76649e67daf2213bfc2f7c5ac5fc",
-    "text_chars": 1605,
-    "text_sha256": "62fb8a80c8c01c4aa55cc800e191428677f9d9875f061c4733f0eaa584c69299",
+    "text_chars": 817,
+    "text_sha256": "7da43369fee8b5c62b5281a2a2b94cb03bb452ca256dd2b50b5fec09cf9b7fce",
     "title": "한도제한계좌 이체·ATM 한도 30만→100만원 상향",
     "topics": [
       "limited_account",
@@ -246,6 +557,32 @@
     "url": "https://www.korea.kr/news/policyNewsView.do?newsId=148940798",
     "verified_at": "2026-08-12",
     "verified_method": "정제본 본문 확인 + 핵심 수치 원문 교차 확인",
+    "visa_scope": [
+      "ALL"
+    ]
+  },
+  "KOREA-PHISHING-GUIDE": {
+    "bytes": 172755,
+    "content_type": "text/html;charset=UTF-8",
+    "doc_type": "guideline",
+    "fetched_at": "2026-08-12T03:42:39+00:00",
+    "final_url": "https://www.korea.kr/news/policyNewsView.do?newsId=148933209",
+    "http_status": 200,
+    "license_note": "공공누리 제1유형",
+    "priority": "P0",
+    "published_at": "2024-09-03",
+    "publisher": "대한민국 정책브리핑",
+    "publisher_type": "government",
+    "sha256": "800a5c89704445632068fb67869e5af95a0f41f6057b5c7f85e2b02eac641c0b",
+    "text_chars": 486,
+    "text_sha256": "d0ca4aa33f18cfa489e6deca7a722d86c7feed9fec0de626e94a2fc98b553f04",
+    "title": "보이스피싱 예방과 피해구제 신청 방법",
+    "topics": [
+      "voice_phishing",
+      "refund"
+    ],
+    "url": "https://www.korea.kr/news/policyNewsView.do?newsId=148933209",
+    "verified_at": "2026-08-12",
     "visa_scope": [
       "ALL"
     ]
