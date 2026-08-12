@@ -7,6 +7,7 @@ services:
     dockerContext: .          # corpus/glossary 를 담아야 하므로 리포 루트
     # ★ Standard(2GB) 이상 필수. 실측 피크 2,096 MiB — ADR-003 참조.
     # Starter(512MB)로는 임베딩 모델이 올라가지 않는다.
+    # 리랭커(1.04GB)를 넣었다면 Pro(4GB)가 필요했겠지만 미도입 확정 — ADR-001.
     plan: standard
     healthCheckPath: /healthz
     envVars:
@@ -16,7 +17,8 @@ services:
         value: intfloat/multilingual-e5-large
       - key: CORS_ORIGINS
         value: https://kbuddy.vercel.app
-      - key: THRESHOLD_TOP1
-        value: "0.839"        # 임베딩 모델을 바꾸면 재보정 필수
+      # ★ 임계값은 여기서 정하지 않는다 — 단일 출처는 app/config.py 다.
+      # 여기에 두면 코드의 보정값과 조용히 어긋난다. 실제로 .env·render.yaml·
+      # config.py 세 곳이 갈라져 있었고, 배포에 나가던 값은 이 줄이었다.
       - key: LOG_LEVEL
         value: INFO
