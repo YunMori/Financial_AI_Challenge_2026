@@ -85,7 +85,13 @@ class Settings(BaseSettings):
     local_dtype: Literal["auto", "float16", "bfloat16", "float32"] = "auto"
     # 생성 길이. API 경로의 llm_max_tokens 와 분리한다 — 로컬은 지연 특성이 달라
     # 같은 값을 쓸 이유가 없다.
-    local_max_new_tokens: int = 1024
+    #
+    # ★ 1024 로 두었더니 **JSON 이 잘렸다.** `answer` 가 스키마 첫 필드라
+    #   (스트리밍 TTFT 때문에 의도한 순서다) 본문이 길면 뒤따르는
+    #   `citations`·`numbers_used` 가 생성되기 전에 한도가 소진된다.
+    #   결과는 인용 0건 → 후처리가 차단 → `no_citation` 폴백이다.
+    #   **답변이 길다는 이유로 정상 답변이 통째로 막히는 구조**라 여유를 준다.
+    local_max_new_tokens: int = 2048
 
     # ── 임베딩 ───────────────────────────────────────────────────────
     # **모델명의 단일 출처.** 색인기(04_index)와 런타임이 같은 값을 봐야 한다.

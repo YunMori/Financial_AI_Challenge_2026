@@ -89,6 +89,36 @@ def resolve_dtype(device: str, preference: str = "auto") -> Any:
     return torch.float32
 
 
+def _require_all_fields(schema: dict) -> dict:
+    """모든 object 의 속성을 `required` 로 만든다 — **문법에서만.**
+
+    ★ 이걸 안 하면 안전장치가 조용히 꺼진다. `LLMAnswer.citations` 는
+    `default_factory=list` 라 JSON 스키마의 `required` 에 들어가지 않고,
+    문법은 **선택 필드의 생략을 허용**한다. 실측(Qwen3-4B): 모델이
+    `answer`·`tier`·`numbers_used` 는 채우고 `citations` 를 통째로 건너뛰었다.
+    → 인용 0건 → 후처리가 차단 → 정상 답변이 `no_citation` 폴백이 된다.
+
+    Anthropic 경로는 같은 스키마로도 문제가 없었다. Claude 가 지시를 따라
+    채웠기 때문이지 스키마가 강제해서가 아니다 — **모델의 선의에 기대고
+    있던 자리**다.
+
+    Pydantic 모델은 건드리지 않는다. 파이썬 쪽 기본값은 그대로 두고(입력이
+    없을 때의 관용은 유지), 생성 문법만 엄격하게 만든다.
+    """
+    def walk(node):
+        if isinstance(node, dict):
+            node = {k: walk(v) for k, v in node.items()}
+            if node.get("type") == "object" and isinstance(node.get("properties"), dict):
+                node["required"] = list(node["properties"].keys())
+                node.setdefault("additionalProperties", False)
+            return node
+        if isinstance(node, list):
+            return [walk(v) for v in node]
+        return node
+
+    return walk(schema)
+
+
 def _clean_search_terms(raw: str) -> str:
     """모델 출력에서 검색어만 남긴다.
 
@@ -135,6 +165,7 @@ class LocalLLMClient:
         self._model = None
         self._tokenizer = None
         self._compiler = None  # XGrammar GrammarCompiler
+        self._answer_grammar = None  # 컴파일된 LLMAnswer 문법
 
     # ── 지연 로드 ────────────────────────────────────────────────────
 
@@ -171,12 +202,122 @@ class LocalLLMClient:
 
     # ── LLMClient 프로토콜 ───────────────────────────────────────────
 
+    @property
+    def answer_grammar(self):
+        """`LLMAnswer` 스키마를 강제하는 컴파일된 문법.
+
+        컴파일은 비싸므로 한 번만 한다. 스키마가 바뀌면 프로세스를 다시 띄워야
+        하지만, 스키마는 배포 단위로 고정이라 문제가 되지 않는다.
+        """
+        if self._answer_grammar is None:
+            import json
+
+            self._answer_grammar = self.compiler.compile_json_schema(
+                json.dumps(_require_all_fields(LLMAnswer.model_json_schema()))
+            )
+        return self._answer_grammar
+
     async def stream(
         self, *, system: str, user: str, lang: Lang,
     ) -> AsyncIterator[StreamEvent]:
-        """구조화 출력 생성. Step 2 에서 구현한다."""
-        raise GenerationFailed("로컬 생성은 아직 구현되지 않았습니다 (Step 2)")
-        yield  # pragma: no cover - 시그니처를 제너레이터로 유지
+        """구조화 출력을 스트리밍한다.
+
+        문법 제약이 형식을 보장하므로 파싱 실패는 사실상 사라진다. 남는 위험은
+        **내용**이다 — 인용 번호가 맞는가, `numbers_used` 를 빠짐없이 나열했는가.
+        후처리(`app.tiering.postprocess`)가 그 둘을 검사하고, 골든셋이 잰다.
+        """
+        import asyncio
+        import queue
+        import threading
+
+        from app.streaming.partial_json import AnswerStreamer
+
+        started = time.perf_counter()
+        loop = asyncio.get_running_loop()
+        chunks: queue.Queue = queue.Queue()
+
+        def run() -> None:
+            """생성은 블로킹이라 스레드에서 돌린다. 조각은 큐로 넘긴다."""
+            try:
+                for piece in self._generate_stream(system, user):
+                    loop.call_soon_threadsafe(chunks.put, piece)
+            except Exception as e:  # noqa: BLE001 - 호출부로 원인을 넘긴다
+                loop.call_soon_threadsafe(chunks.put, e)
+            finally:
+                loop.call_soon_threadsafe(chunks.put, None)
+
+        threading.Thread(target=run, daemon=True).start()
+
+        streamer = AnswerStreamer()
+        raw_parts: list[str] = []
+        while True:
+            item = await asyncio.to_thread(chunks.get)
+            if item is None:
+                break
+            if isinstance(item, Exception):
+                raise GenerationFailed(
+                    f"로컬 생성 실패: {type(item).__name__}: {item}"
+                ) from item
+            raw_parts.append(item)
+            # `answer` 가 스키마 첫 필드라 본문이 가장 먼저 흘러나온다.
+            if piece := streamer.feed(item):
+                yield StreamEvent(kind="token", text=piece)
+
+        raw = "".join(raw_parts)
+        try:
+            answer = LLMAnswer.model_validate_json(raw)
+        except Exception as e:
+            # 문법 제약이 있으므로 여기 오면 대개 생성 길이 초과다.
+            raise GenerationFailed(
+                f"구조화 출력 파싱 실패: {type(e).__name__} (길이 {len(raw)})"
+            ) from e
+
+        yield StreamEvent(
+            kind="final",
+            result=GenerationResult(
+                answer=answer,
+                raw_text=raw,
+                stats=GenerationStats(
+                    model=self.model_name,
+                    output_tokens=len(raw_parts),
+                    latency_ms=int((time.perf_counter() - started) * 1000),
+                ),
+            ),
+        )
+
+    def _generate_stream(self, system: str, user: str):
+        """문법 제약 스트리밍 생성 (동기 제너레이터)."""
+        from transformers import TextIteratorStreamer
+        from xgrammar.contrib.hf import LogitsProcessor
+
+        self._load()
+        messages = [
+            {"role": "system", "content": system},
+            {"role": "user", "content": user},
+        ]
+        enc = self._tokenizer.apply_chat_template(
+            messages, add_generation_prompt=True, return_tensors="pt",
+            return_dict=True,
+        ).to(self.device)
+
+        text_streamer = TextIteratorStreamer(
+            self._tokenizer, skip_prompt=True, skip_special_tokens=True,
+        )
+        import threading
+
+        from app.config import get_settings
+
+        kwargs = dict(
+            **enc,
+            max_new_tokens=get_settings().local_max_new_tokens,
+            do_sample=False,
+            pad_token_id=self._tokenizer.eos_token_id,
+            logits_processor=[LogitsProcessor(self.answer_grammar)],
+            streamer=text_streamer,
+        )
+        t = threading.Thread(target=self._model.generate, kwargs=kwargs, daemon=True)
+        t.start()
+        yield from text_streamer
 
     async def translate_to_search_terms(self, query: str, lang: str) -> str:
         """질의 정규화 — 비한국어 질의를 한국어 검색어로.
