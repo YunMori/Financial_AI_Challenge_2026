@@ -18,9 +18,24 @@ from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 
-from app.config import REPO_ROOT
+from app.config import API_ROOT, REPO_ROOT
 
-GLOSSARY_CSV = REPO_ROOT / "corpus" / "glossary" / "glossary.csv"
+
+def _find_glossary() -> Path:
+    """용어 사전 위치.
+
+    Docker 이미지에는 `corpus/glossary/` 만 복사되므로 `API_ROOT`(=/app) 아래에
+    있고, 로컬 개발에서는 리포 루트 아래에 있다. 둘 다 본다 —
+    한쪽만 보면 배포에서만 깨지는 사고가 난다.
+    """
+    for base in (API_ROOT, REPO_ROOT):
+        candidate = base / "corpus" / "glossary" / "glossary.csv"
+        if candidate.exists():
+            return candidate
+    return REPO_ROOT / "corpus" / "glossary" / "glossary.csv"  # 에러 메시지용
+
+
+GLOSSARY_CSV = _find_glossary()
 
 # 역매핑에서 무시할 짧은 표기. "ARC" 같은 코드가 일반 영단어와 충돌하는 것을 막는다.
 MIN_LOOKUP_CHARS = 3

@@ -1,0 +1,22 @@
+# Render 배포 설정 (planner §15.1, §15.3)
+services:
+  - type: web
+    name: kbuddy-api
+    runtime: docker
+    dockerfilePath: ./apps/api/Dockerfile
+    dockerContext: .          # corpus/glossary 를 담아야 하므로 리포 루트
+    # ★ Standard(2GB) 이상 필수. 실측 피크 2,096 MiB — ADR-003 참조.
+    # Starter(512MB)로는 임베딩 모델이 올라가지 않는다.
+    plan: standard
+    healthCheckPath: /healthz
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false           # 대시보드에서 직접 입력 (커밋 금지)
+      - key: EMBED_MODEL
+        value: intfloat/multilingual-e5-large
+      - key: CORS_ORIGINS
+        value: https://kbuddy.vercel.app
+      - key: THRESHOLD_TOP1
+        value: "0.839"        # 임베딩 모델을 바꾸면 재보정 필수
+      - key: LOG_LEVEL
+        value: INFO

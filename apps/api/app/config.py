@@ -13,10 +13,26 @@ from typing import Annotated, Literal
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
 # `app/` 를 담고 있는 디렉터리. 로컬은 `apps/api`, Docker 는 `/app` 이다.
 # 인덱스 같은 런타임 자산은 이 기준으로 푼다 — 그래야 실행 위치와 무관하게 맞다.
 API_ROOT = Path(__file__).resolve().parents[1]
+
+
+def _find_repo_root() -> Path:
+    """리포 루트를 **표식으로** 찾는다.
+
+    `parents[3]` 처럼 깊이를 고정하면 Docker 에서 `IndexError` 가 난다 —
+    이미지에는 `/app/app/config.py` 만 있어 부모가 3개뿐이다.
+    로컬에서만 통과하고 **컨테이너에서 기동 자체가 실패**하는 사고였다
+    (dev-log 2026-08-12). 표식이 없으면 API_ROOT 로 폴백한다.
+    """
+    for candidate in (API_ROOT, *API_ROOT.parents):
+        if (candidate / "corpus").is_dir() or (candidate / ".git").exists():
+            return candidate
+    return API_ROOT
+
+
+REPO_ROOT = _find_repo_root()
 
 
 def _resolve(path: Path, base: Path) -> Path:
