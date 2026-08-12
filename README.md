@@ -79,7 +79,8 @@ docker run -p 10000:10000 -e ANTHROPIC_API_KEY=sk-ant-... kbuddy-api
 |---|---|
 | `planner.md` | 8주 실행 계획서 |
 | `docs/functional-spec.md` | 기능명세서 (제출물) |
-| `docs/fact-check.md` | 기획서 수치의 1차 출처 검증 대장 |
+| `docs/fact-check.md` | 기획서 수치의 1차 출처 검증 대장 (5/11 닫힘) |
+| `docs/spec-changes.md` | **기획서 수정 대상 15건** — 근거·조치 포함 |
 | `docs/dev-log.md` | 실측값·결정·기획서와 어긋난 지점 |
 | `docs/adr/` | 되돌리기 어려운 결정 기록 |
 | `corpus/stats/SOURCES.md` | 통계 데이터 출처·해시 |
