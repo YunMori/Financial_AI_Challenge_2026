@@ -27,9 +27,21 @@ MULTIPLIERS: tuple[tuple[str, int], ...] = (
     ("천", 10**3), ("백", 10**2), ("십", 10),
 )
 
+# 영어·베트남어 배수어. **다국어 서비스이므로 답변이 한국어 표기로만 오지
+# 않는다.** 이걸 모르면 "30 million won" 이 30 으로 읽혀 근거와 대조되고,
+# 정상 답변이 "근거 없는 수치"로 차단된다(실측: exp_003 과잉폴백 9건 중 다수).
+WESTERN_MULTIPLIERS: dict[str, int] = {
+    "thousand": 10**3, "million": 10**6, "billion": 10**9, "trillion": 10**12,
+    "nghìn": 10**3, "ngàn": 10**3, "triệu": 10**6, "tỷ": 10**9, "ty": 10**9,
+}
+WESTERN_MULT_PATTERN = "|".join(
+    sorted((re.escape(w) for w in WESTERN_MULTIPLIERS), key=len, reverse=True)
+)
+
 # 단위 정규화. 표기가 달라도 같은 단위로 묶는다.
 UNIT_ALIASES: dict[str, str] = {
     "원": "krw", "won": "krw", "krw": "krw",
+    "동": "vnd", "đồng": "vnd", "dong": "vnd", "vnd": "vnd",
     "달러": "usd", "불": "usd", "dollar": "usd", "dollars": "usd", "usd": "usd", "$": "usd",
     "%": "pct", "퍼센트": "pct", "프로": "pct",
     "년": "year", "개월": "month", "달": "month", "일": "day", "회": "count", "건": "count",
@@ -44,6 +56,13 @@ DATE_RE = re.compile(
 # 연월만: 2024년 5월 / 2024-05
 YEARMONTH_RE = re.compile(r"(?<![\d.])'?(\d{2,4})\s*[.\-/년]\s*(\d{1,2})\s*월(?![\d])")
 
+# 연도가 **뒤에** 오는 표기: 29/3/2024 (베트남·유럽) / 3/29/2024 (미국).
+# 한국 문서는 연도가 앞이지만 **답변은 en·vi 로도 나간다.** 이걸 모르면
+# "29/3/2024" 가 날짜가 아니라 수 29 로 읽혀 근거와 대조된다.
+TRAILING_YEAR_RE = re.compile(
+    r"(?<![\d.])(\d{1,2})\s*[./\-]\s*(\d{1,2})\s*[./\-]\s*(\d{4})(?![\d])"
+)
+
 # 수량: 선택적 통화기호 + 숫자(또는 한자어 수사) + 배수 + 선택적 단위
 #   1,000,000원 / 100만원 / 백만 원 / $5,000 / 5만 달러 / 30% / 6개
 #
@@ -51,14 +70,23 @@ YEARMONTH_RE = re.compile(r"(?<![\d.])'?(\d{2,4})\s*[.\-/년]\s*(\d{1,2})\s*월(
 # ("100만원입니다", "30만원에서") 경계가 성립하지 않는다. 토크나이저의
 # 체류자격 정규식에서 똑같이 겪은 문제다(dev-log 2026-08-11).
 # 앞쪽만 숫자·구분자로 막아 수를 중간에서 자르는 것을 방지한다.
+# `num` 의 첫 대안이 **유럽·베트남식 천단위 점**이다(3.000.000). 반드시 먼저
+# 와야 한다 — 뒤에 두면 `\d[\d,]*(?:\.\d+)?` 가 "3.000" 을 소수 3.0 으로 먹고
+# 나머지를 흘린다. 실제로 그랬다: "3.000.000 won" 이 **3** 으로 읽혔다.
+# 1,000,000 배 틀린 값이 조용히 통과할 수 있는 자리였다.
 QUANTITY_RE = re.compile(
     r"(?<![\d.,])"
     r"(?P<cur>[$₩])?\s*"
-    r"(?P<num>\d[\d,]*(?:\.\d+)?|[영공일이삼사오육칠팔구십백천만억조]{2,8})"
+    r"(?P<num>\d{1,3}(?:\.\d{3})+(?![\d.])"
+    r"|\d[\d,]*(?:\.\d+)?"
+    r"|[영공일이삼사오육칠팔구십백천만억조]{2,8})"
     r"\s*(?P<mult>[십백천만억조]*)"
+    r"\s*(?P<wmult>" + WESTERN_MULT_PATTERN + r")?"
     r"\s*(?P<unit>" + UNIT_PATTERN + r")?",
     re.IGNORECASE,
 )
+# 천단위 점 표기인지 판정한다. `3.000.000` 은 그렇고 `3.5` 는 아니다.
+_DOT_GROUPED_RE = re.compile(r"^\d{1,3}(?:\.\d{3})+$")
 
 # 날짜로 이미 해석한 구간은 수량 스캔에서 제외한다. 그러지 않으면
 # "2024.5.2" 가 2024 / 5 / 2 세 개의 수로도 잡혀 근거 집합이 오염된다.
@@ -122,8 +150,8 @@ def parse_numeral(token: str) -> Numeral | None:
     token = token.strip()
     if not token:
         return None
-    if d := _parse_date(token):
-        return Numeral(value=float(d.replace("-", "")), unit="date")
+    if cands := _date_candidates(token):
+        return Numeral(value=float(cands[0].replace("-", "")), unit="date")
     m = QUANTITY_RE.search(token)
     if not m:
         return None
@@ -133,8 +161,10 @@ def parse_numeral(token: str) -> Numeral | None:
 def _numeral_from_match(m: re.Match[str]) -> Numeral | None:
     raw = m.group("num")
     if raw[0].isdigit():
+        # `3.000.000` 의 점은 소수점이 아니라 천단위 구분자다.
+        cleaned = raw.replace(".", "") if _DOT_GROUPED_RE.match(raw) else raw
         try:
-            base = float(raw.replace(",", ""))
+            base = float(cleaned.replace(",", ""))
         except ValueError:
             return None
     else:
@@ -143,9 +173,34 @@ def _numeral_from_match(m: re.Match[str]) -> Numeral | None:
             return None
         base = float(parsed)
     value = _apply_multiplier(base, m.group("mult") or "")
+    if wmult := (m.group("wmult") or "").lower():
+        value *= WESTERN_MULTIPLIERS[wmult]
     # 단위는 뒤(100만원)에도 앞($5,000)에도 올 수 있다.
     unit_raw = (m.group("unit") or m.group("cur") or "").lower()
     return Numeral(value=value, unit=UNIT_ALIASES.get(unit_raw, ""))
+
+
+def _date_candidates(text: str) -> list[str]:
+    """가능한 ISO 날짜 표기들.
+
+    `29/3/2024` 처럼 연도가 뒤에 오면 **일/월 순서를 알 수 없다** — 베트남·유럽은
+    일이 먼저, 미국은 월이 먼저다. 한쪽으로 찍으면 절반은 틀린다.
+    그래서 **가능한 해석을 전부 낸다.** 근거에 하나라도 있으면 지지된 것으로 본다.
+    앞 숫자가 12 를 넘으면 일이 확실하므로 후보는 하나뿐이다.
+    """
+    if d := _parse_date(text):
+        return [d]
+    if m := TRAILING_YEAR_RE.search(text):
+        a, b, y = (int(g) for g in m.groups())
+        out: list[str] = []
+        if 1 <= b <= 12 and 1 <= a <= 31:  # a=일 b=월 (베트남·유럽)
+            out.append(f"{y:04d}-{b:02d}-{a:02d}")
+        if 1 <= a <= 12 and 1 <= b <= 31:  # a=월 b=일 (미국)
+            iso = f"{y:04d}-{a:02d}-{b:02d}"
+            if iso not in out:
+                out.append(iso)
+        return out
+    return []
 
 
 def _parse_date(text: str) -> str | None:
@@ -207,6 +262,9 @@ def numeral_supported(token: str, evidence: set[str]) -> bool:
     (서류명 등)이 numbers_used 에 섞여 들어온 것을 근거 부족으로 오판하면
     정상 답변이 차단된다 — 거짓 폴백을 늘리는 쪽이 더 나쁘다.
     """
+    # 날짜는 해석이 여럿일 수 있다(일/월 순서). 하나라도 근거에 있으면 인정한다.
+    if cands := _date_candidates(token):
+        return any(str(Numeral(float(c.replace("-", "")), "date")) in evidence for c in cands)
     n = parse_numeral(token)
     if n is None:
         return True

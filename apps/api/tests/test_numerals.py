@@ -128,3 +128,93 @@ class TestNumeralSupported:
     def test_wrong_date_is_caught(self):
         ev = extract_numerals("2025. 3. 21. (금) 부터 이용할 수 있습니다")
         assert not numeral_supported("2025-03-22", ev)
+
+
+class TestMultilingualNotation:
+    """★ 다국어 서비스인데 숫자 파서가 한국어 표기만 알고 있었다.
+
+    실측(exp_003): 과잉폴백 14건 중 9건이 `unsupported_number` 였고,
+    거부된 값에 `3.000.000 won` · `30 million won` 이 들어 있었다.
+    답변은 en/vi 로 나가는데 파서는 `100만원` 형태만 이해했다.
+    """
+
+    @pytest.fixture
+    def evidence(self):
+        return extract_numerals("인터넷뱅킹 100만원, 창구 300만원까지 이체할 수 있습니다")
+
+    def test_dot_thousand_separator(self):
+        """★ 베트남어·유럽식 `3.000.000` 을 소수 3.0 으로 읽고 있었다.
+
+        1,000,000 배 틀린 값이다. 근거에 `3` 이 있으면 **틀린 금액이 통과**하고,
+        없으면 정상 답변이 차단된다. 양쪽으로 다 위험했다.
+        """
+        assert str(parse_numeral("3.000.000 won")) == "3000000:krw"
+        assert str(parse_numeral("1.000.000")) == "1000000"
+
+    def test_decimal_point_still_works(self):
+        """천단위 점을 고치면서 진짜 소수점을 깨뜨리면 안 된다."""
+        assert str(parse_numeral("3.5")) == "3.5"
+        assert str(parse_numeral("2.5%")) == "2.5:pct"
+
+    @pytest.mark.parametrize(
+        "token,expected",
+        [
+            ("30 million won", "30000000:krw"),
+            ("1 million won", "1000000:krw"),
+            ("2 triệu đồng", "2000000:vnd"),
+            ("3 nghìn đồng", "3000:vnd"),
+        ],
+    )
+    def test_western_scale_words(self, token, expected):
+        assert str(parse_numeral(token)) == expected
+
+    def test_vietnamese_amount_matches_korean_evidence(self, evidence):
+        """근거는 한국어(300만원), 답변은 베트남어 표기(3.000.000). 같은 값이다."""
+        assert numeral_supported("3.000.000 won", evidence)
+
+    def test_english_amount_matches_korean_evidence(self, evidence):
+        assert numeral_supported("1 million won", evidence)
+
+    def test_wrong_multilingual_amount_is_still_caught(self, evidence):
+        """느슨하게 만든 것이 아니다 — 틀린 값은 여전히 잡혀야 한다."""
+        assert not numeral_supported("30 million won", evidence)
+        assert not numeral_supported("5.000.000 won", evidence)
+
+
+class TestMultilingualDates:
+    """연도가 뒤에 오는 날짜 표기. 한국 문서는 연도가 앞이지만 **답변은 아니다.**
+
+    실측(exp_004): 베트남어 답변의 `29/3/2024` 가 날짜가 아니라 수 **29** 로
+    읽혔다. 천단위 점과 같은 부류의 결함 — 파서가 한국어 표기만 알고 있었다.
+    """
+
+    @pytest.fixture
+    def evidence(self):
+        return extract_numerals("2024. 3. 29. 부터 시행하며 2025. 3. 21. 확대됩니다")
+
+    def test_day_first_is_a_date_not_a_quantity(self):
+        assert str(parse_numeral("29/3/2024")) == "20240329:date"
+
+    def test_day_first_matches_korean_evidence(self, evidence):
+        assert numeral_supported("29/3/2024", evidence)
+
+    def test_ambiguous_order_accepts_either_reading(self, evidence):
+        """`21/3/2025` 와 `3/21/2025` 는 같은 날을 가리킬 수 있다.
+
+        한쪽으로 찍으면 절반이 틀리므로 가능한 해석을 모두 대조한다.
+        """
+        assert numeral_supported("21/3/2025", evidence)
+        assert numeral_supported("3/21/2025", evidence)
+
+    def test_wrong_date_still_caught(self, evidence):
+        """느슨해진 것이 아니다 — 근거에 없는 날짜는 여전히 잡는다."""
+        assert not numeral_supported("30/3/2024", evidence)
+        assert not numeral_supported("29/4/2024", evidence)
+
+    def test_hallucinated_year_is_caught(self, evidence):
+        """모델이 지어낸 연도는 막아야 한다. 이건 파서 버그가 아니라 정상 동작이다."""
+        assert not numeral_supported("2012년", evidence)
+
+    def test_year_first_forms_unaffected(self):
+        assert str(parse_numeral("2024-05-02")) == "20240502:date"
+        assert str(parse_numeral("2024년 5월 2일")) == "20240502:date"
