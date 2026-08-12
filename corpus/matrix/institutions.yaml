@@ -116,9 +116,12 @@ common:
       농협·하나·부산은행은 2024-05-10 부터 적용(은행별 시행일 차이).
       기획서가 "1일 한도 100만원"으로만 서술한 부분은 거래유형을 명시해야 한다.
     evidence:
-      - doc_id: FSC-2024-0502-LIMIT-PDF
-        source_url: https://www.fsc.go.kr/no010101/82205
+      - doc_id: FSC-2024-0502-LIMIT-GUIDE
+        source_url: https://www.fsc.go.kr/comm/getFile?srvcId=BBSTY1&upperNo=82205&fileTy=ATTACH&fileNo=2
         published_at: "2024-05-02"
+        note: >-
+          HWP 첨부. 같은 보도자료의 PDF 판은 pdfplumber 가 '개선방안' 열을
+          통째로 놓쳐 상향 전 값만 남았다 — 창구 300만원의 근거는 이 파일이다.
       - doc_id: KOREA-2024-0502-LIMIT-BRIEF
         source_url: https://www.korea.kr/news/policyNewsView.do?newsId=148928795
         published_at: "2024-05-02"
