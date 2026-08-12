@@ -262,6 +262,13 @@ def main() -> int:
         #   것은 **판단이 아니라 미실행**이다. 그대로 두면 정상 문항이 전부
         #   "잘못 막힌 것"으로 집계돼 과잉 폴백률이 100% 로 나온다 —
         #   실제로 한 번 그렇게 나왔다. 규칙이 통과시킨 것으로 기록한다.
+        #
+        # ★★ 같은 이유로 **비한국어의 게이트 지표는 llm 모드와 비교할 수 없다.**
+        #   임계값은 질의 번역(③)이 켜진 상태로 보정돼 있는데, `--no-llm` 은
+        #   번역도 하지 않는다(번역 역시 LLM 호출이다). 그래서 en·vi 질의가
+        #   자기 언어 그대로 검색돼 점수가 낮게 나오고 무더기로 폴백된다 —
+        #   실측: 과잉폴백 43.5%, 실패 40건 중 38건이 en·vi.
+        #   `--no-llm` 은 **ko 경로와 검색 자체의 회귀**를 보는 도구다.
         for o in outcomes:
             if o.fallback_reason == "upstream_error":
                 o.fallback_reason = None
@@ -301,8 +308,14 @@ def main() -> int:
 
     if no_llm:
         report["reached_generation"] = reached_generation
+        report["gate_metrics_comparable"] = False
+        n_non_ko = sum(1 for o in outcomes if o.lang != "ko")
         print(f"\n※ --no-llm: {reached_generation}문항이 규칙을 통과해 생성 단계까지 갔습니다.")
         print("  생성에 의존하는 지표는 '미측정' 입니다 — 0% 가 아닙니다.")
+        if n_non_ko:
+            print(f"  ★ 비한국어 {n_non_ko}문항의 게이트 지표는 llm 모드와 비교할 수 없습니다.")
+            print("    임계값은 질의 번역이 켜진 상태로 보정돼 있는데 --no-llm 은 번역도 끕니다.")
+            print("    회귀는 `--lang ko` 로 보거나 llm 모드로 재실행하세요.")
 
     print_report(report)
 
