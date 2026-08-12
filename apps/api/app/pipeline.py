@@ -139,8 +139,11 @@ class ChatPipeline:
         tel.top1 = result.top1_dense
         tel.n_candidates = len(result.candidates)
 
-        if result.is_empty or result.top1_dense < s.threshold_top1:
-            log.info("검색 신뢰도 미달: top1=%.3f < %.3f", result.top1_dense, s.threshold_top1)
+        # 언어별 임계값. 교차 언어 검색은 점수가 체계적으로 낮게 나온다.
+        threshold = s.threshold_for(lang.value)
+        if result.is_empty or result.top1_dense < threshold:
+            log.info("검색 신뢰도 미달: top1=%.3f < %.3f (lang=%s)",
+                     result.top1_dense, threshold, lang.value)
             yield done(make_fallback(FallbackReason.LOW_CONFIDENCE, lang))
             return
 
