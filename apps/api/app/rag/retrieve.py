@@ -23,6 +23,7 @@ from typing import Any
 
 from app.config import get_settings
 from app.rag.embed import get_embedder
+from app.rag.rerank import get_reranker, to_confidence
 from app.rag.tokenize import tokenize
 
 log = logging.getLogger(__name__)
@@ -42,6 +43,7 @@ class Candidate:
     lexical_rank: int | None = None
     lexical_score: float | None = None
     rrf: float = 0.0
+    rerank_score: float | None = None  # 0~1 (교차 인코더 로짓의 sigmoid)
 
     @property
     def visa_scope(self) -> list[str]:
@@ -67,10 +69,24 @@ class RetrievalResult:
     n_before_filter: int
     visa_filter_applied: bool
     visa_filter_relaxed: bool
+    # 리랭킹을 했으면 1위의 리랭커 점수(0~1), 아니면 None.
+    top1_rerank: float | None = None
+    reranked: bool = False
 
     @property
     def is_empty(self) -> bool:
         return not self.candidates
+
+    @property
+    def confidence(self) -> float:
+        """게이트가 볼 점수.
+
+        리랭킹을 했으면 리랭커 점수를, 아니면 dense top1 을 준다.
+        **두 척도가 섞이면 안 되므로 판단 지점을 여기 하나로 모은다.**
+        """
+        if self.reranked and self.top1_rerank is not None:
+            return self.top1_rerank
+        return self.top1_dense
 
 
 class HybridRetriever:
@@ -194,11 +210,35 @@ class HybridRetriever:
                 relaxed = True
                 log.debug("체류자격 필터 해제 (후보 %d건)", len(keep))
 
-        selected = fused[:top_n]
-        top1_dense = max((c.dense_score or 0.0 for c in selected), default=0.0)
         # 변별력: 1위와 3위의 RRF 점수 차. 상위가 평평하면 무엇을 골라도
         # 비슷하다는 뜻이고, 그것은 근거가 약하다는 신호다.
+        # **리랭킹 전에 잰다** — 리랭커가 순서를 바꾼 뒤에 재면 RRF 차이가
+        # 아닌 값이 margin 이라는 이름으로 보고된다.
         margin = (fused[0].rrf - fused[2].rrf) if len(fused) >= 3 else 0.0
+
+        # ── ⑤ 리랭킹 ────────────────────────────────────────────────
+        # RRF 상위 N 건을 교차 인코더로 다시 매긴다. RRF 는 순위만 합치므로
+        # "질의에 실제로 답이 되는가"를 보지 못한다 — 그걸 여기서 본다.
+        reranked = False
+        top1_rerank: float | None = None
+        pool = fused[:max(top_n, s.rerank_top_n)]
+        reranker = get_reranker()
+        if reranker.enabled and pool:
+            logits = reranker.score(query, [c.text for c in pool])
+            if len(logits) == len(pool):
+                for cand, logit in zip(pool, logits):
+                    cand.rerank_score = to_confidence(logit)
+                pool = sorted(pool, key=lambda c: -(c.rerank_score or 0.0))
+                fused = pool + fused[len(pool):]
+                reranked = True
+            else:  # pragma: no cover - 백엔드가 개수를 어기면 순위를 믿을 수 없다
+                log.warning("리랭커가 %d건 후보에 %d개 점수를 반환 — 리랭킹을 건너뜁니다",
+                            len(pool), len(logits))
+
+        selected = fused[:top_n]
+        top1_dense = max((c.dense_score or 0.0 for c in selected), default=0.0)
+        if reranked and selected:
+            top1_rerank = selected[0].rerank_score
 
         return RetrievalResult(
             candidates=selected,
@@ -207,6 +247,8 @@ class HybridRetriever:
             n_before_filter=n_before,
             visa_filter_applied=applied,
             visa_filter_relaxed=relaxed,
+            top1_rerank=top1_rerank,
+            reranked=reranked,
         )
 
 
