@@ -45,6 +45,14 @@ from app.schemas.llm import LLMAnswer
 
 log = logging.getLogger(__name__)
 
+# 정규화는 짧은 검색어만 만들면 된다 (anthropic_client 의 NORMALIZE_MAX_TOKENS 와 같은 값).
+NORMALIZE_MAX_NEW_TOKENS = 128
+
+# 소형 모델은 "설명 없이 검색어만"이라고 해도 서두를 붙이거나 따옴표로 감싸는
+# 일이 잦다. 그대로 BM25 에 넣으면 검색어가 오염된다 — 토크나이저가 조사·
+# 기호를 그대로 토큰으로 만들기 때문이다.
+_PREFIXES = ("검색어:", "검색어 :", "Search terms:", "Keywords:", "답변:", "출력:")
+
 
 def resolve_device(preference: str = "auto") -> str:
     """실행 장치를 고른다.
@@ -79,6 +87,30 @@ def resolve_dtype(device: str, preference: str = "auto") -> Any:
     if device == "mps":
         return torch.float16
     return torch.float32
+
+
+def _clean_search_terms(raw: str) -> str:
+    """모델 출력에서 검색어만 남긴다.
+
+    "설명 없이 검색어만 출력하세요"라고 지시해도 소형 모델은 서두("검색어:")를
+    붙이거나 따옴표로 감싸거나 여러 줄로 답한다. 그대로 BM25 에 넘기면 기호와
+    조사가 토큰이 되어 검색어가 오염된다.
+
+    **첫 줄만 취한다.** 여러 줄이 오면 뒤쪽은 대개 설명이다.
+    """
+    text = (raw or "").strip()
+    for line in text.splitlines():
+        line = line.strip()
+        if line:
+            text = line
+            break
+    else:
+        return ""
+
+    for p in _PREFIXES:
+        if text.lower().startswith(p.lower()):
+            text = text[len(p):].strip()
+    return text.strip().strip('"“”\'`').strip()
 
 
 class LocalLLMClient:
@@ -147,8 +179,48 @@ class LocalLLMClient:
         yield  # pragma: no cover - 시그니처를 제너레이터로 유지
 
     async def translate_to_search_terms(self, query: str, lang: str) -> str:
-        """질의 정규화. Step 1 에서 구현한다."""
-        raise GenerationFailed("로컬 정규화는 아직 구현되지 않았습니다 (Step 1)")
+        """질의 정규화 — 비한국어 질의를 한국어 검색어로.
+
+        여기서 실패해도 사전(glossary) 경로가 남으므로 파이프라인이 죽지 않는다.
+        위험이 가장 작은 지점이라 런타임 배선을 이 메서드로 먼저 검증한다.
+
+        **greedy 로 뽑는다.** 검색어 생성은 창의성이 필요한 작업이 아니고,
+        같은 질의가 매번 다른 검색어가 되면 회귀 측정이 불가능해진다.
+        """
+        import asyncio
+
+        from app.llm.prompts import NORMALIZE_PROMPT
+
+        prompt = NORMALIZE_PROMPT.format(lang=lang, query=query)
+        try:
+            text = await asyncio.to_thread(self._generate_text, prompt, NORMALIZE_MAX_NEW_TOKENS)
+        except Exception as e:  # noqa: BLE001 - 원인을 프로토콜 예외로 좁힌다
+            raise GenerationFailed(f"로컬 정규화 실패: {type(e).__name__}: {e}") from e
+        return _clean_search_terms(text)
+
+    # ── 내부 ─────────────────────────────────────────────────────────
+
+    def _generate_text(self, prompt: str, max_new_tokens: int) -> str:
+        """동기 생성. 호출부가 `asyncio.to_thread` 로 감싼다.
+
+        transformers 의 `generate` 는 블로킹이라 이벤트 루프에서 직접 부르면
+        SSE 스트림 전체가 멎는다.
+        """
+        self._load()
+        messages = [{"role": "user", "content": prompt}]
+        inputs = self._tokenizer.apply_chat_template(
+            messages, add_generation_prompt=True, return_tensors="pt",
+            enable_thinking=False,
+        ).to(self.device)
+
+        out = self._model.generate(
+            inputs,
+            max_new_tokens=max_new_tokens,
+            do_sample=False,
+            pad_token_id=self._tokenizer.eos_token_id,
+        )
+        # 프롬프트 부분을 잘라내고 새로 생성된 토큰만 디코딩한다.
+        return self._tokenizer.decode(out[0][inputs.shape[-1]:], skip_special_tokens=True)
 
 
 def build_local_client() -> LocalLLMClient:
