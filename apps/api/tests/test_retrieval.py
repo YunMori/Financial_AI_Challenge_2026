@@ -161,3 +161,31 @@ class TestHybridSearch:
         table = next((c for c in res.candidates if "HIKOREA-ARC-DOCS" in c.chunk_id), None)
         assert table is not None, "제출서류 표가 검색되지 않았습니다"
         assert sum(code in table.text for code in ("D-2", "E-7", "E-9", "F-6")) >= 4
+
+
+class TestPerLanguageThreshold:
+    """언어별 임계값 (실측 2026-08-12).
+
+    한국어로 보정한 값 하나만 쓰면 비한국어 질의가 **항상** 폴백된다.
+    다국어 임베딩은 같은 언어 쌍을 교차 언어 쌍보다 체계적으로 높게 주기 때문이다.
+    다국어 서비스에서 이건 기능 상실이므로 회귀를 막는다.
+    """
+
+    def test_every_public_language_has_a_threshold(self):
+        from app.schemas.common import Lang
+
+        s = get_settings()
+        for lang in Lang:
+            assert lang.value in s.threshold_top1_by_lang, (
+                f"{lang.value} 임계값이 없습니다. 공개 언어를 늘렸다면 "
+                "`python -m app.rag.cli --calibrate` 로 재보정하세요."
+            )
+
+    def test_non_korean_thresholds_are_lower(self):
+        """교차 언어 점수는 체계적으로 낮다 — 같은 값을 쓰면 전부 폴백된다."""
+        s = get_settings()
+        for lang in ("en", "vi"):
+            assert s.threshold_for(lang) < s.threshold_for("ko")
+
+    def test_unknown_language_falls_back_to_global(self):
+        assert get_settings().threshold_for("th") == get_settings().threshold_top1

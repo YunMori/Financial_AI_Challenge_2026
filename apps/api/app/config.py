@@ -91,6 +91,16 @@ class Settings(BaseSettings):
     # 골든셋(함정 40문항)이 생기면 반드시 다시 잡아야 한다.**
     threshold_top1: float = 0.839
     #
+    # **언어별 임계값이 필요하다.** 다국어 임베딩은 같은 언어 쌍을 교차 언어
+    # 쌍보다 체계적으로 높게 준다. 한국어로 보정한 값 하나만 쓰면 비한국어
+    # 질의가 **항상** 폴백된다(실측 2026-08-12: ko 0.89 vs vi 0.80).
+    # 다국어 서비스에서 이건 기능 상실이다.
+    threshold_top1_by_lang: Annotated[dict[str, float], NoDecode] = {
+        "ko": 0.839,
+        "en": 0.795,
+        "vi": 0.790,
+    }
+    #
     # margin(1위와 3위의 RRF 차)은 **신뢰도 신호로 쓰지 않는다.** 실측에서
     # 코퍼스 밖 질의가 오히려 높은 margin 을 냈다 — 두 검색기가 같은 문서를
     # 고르면 커지는 값이라 "근거가 존재하는가"와 무관하기 때문이다.
@@ -116,6 +126,19 @@ class Settings(BaseSettings):
         if isinstance(v, str):
             return [o.strip() for o in v.split(",") if o.strip()]
         return v
+
+    @field_validator("threshold_top1_by_lang", mode="before")
+    @classmethod
+    def _parse_thresholds(cls, v: object) -> object:
+        """`THRESHOLD_TOP1_BY_LANG=ko:0.84,vi:0.79` 형태를 허용한다."""
+        if isinstance(v, str):
+            return {k.strip(): float(x) for k, x in
+                    (part.split(":") for part in v.split(",") if part.strip())}
+        return v
+
+    def threshold_for(self, lang: str) -> float:
+        """언어별 검색 신뢰도 임계값. 없으면 전역값으로 폴백한다."""
+        return self.threshold_top1_by_lang.get(lang, self.threshold_top1)
 
     @field_validator("chroma_path", "bm25_index_path", mode="after")
     @classmethod
