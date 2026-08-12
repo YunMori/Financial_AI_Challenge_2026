@@ -116,13 +116,32 @@ class TestThresholdConfig:
     def test_threshold_matches_measured_distribution(self):
         """planner 원안의 0.42 는 e5 척도에서 폴백을 전혀 걸지 못한다.
 
-        실측(2026-08-12): 코퍼스 안 최소 0.8494 / 밖 최대 0.8293.
+        골든셋 100문항 실측(2026-08-12, 번역 켜짐): 정상 질의 최소 0.8074 /
+        무근거 질의 최대 0.8444. 언어별 값은 이 구간 안에 있어야 한다.
         값을 되돌리면 이 테스트가 막는다.
         """
         s = get_settings()
-        assert 0.83 <= s.threshold_top1 <= 0.86, (
-            f"threshold_top1={s.threshold_top1} 은 실측 분포 밖입니다. "
-            "임베딩 모델을 바꿨다면 `python -m app.rag.cli --calibrate` 로 다시 재세요."
+        for lang, t in s.threshold_top1_by_lang.items():
+            assert 0.80 <= t <= 0.86, (
+                f"{lang} 임계값 {t} 는 실측 분포 밖입니다. 임베딩 모델이나 "
+                "코퍼스를 바꿨다면 `python -m app.rag.cli --calibrate` 로 다시 재세요."
+            )
+
+    def test_gate_targets_missing_evidence_not_tier_c(self):
+        """★ 게이트가 책임지는 것은 **근거 없음** 하나뿐이다.
+
+        계층C 함정(개별 심사 요구)은 주제상 관련이 있어 검색 점수가 높게
+        나오는 것이 정상이다. 그걸 게이트로 막으려고 임계값을 올리면 정상
+        질의가 함께 죽는다 — 실제로 과잉폴백 33.8% 가 그렇게 나왔다.
+        계층C 는 ②(규칙)와 ⑨(계층 판정)의 몫이다.
+
+        임계값이 계층C 함정의 점수대(ko 최대 0.8393)보다 위로 올라가면
+        그 실수를 되풀이하는 것이므로 여기서 막는다.
+        """
+        s = get_settings()
+        assert s.threshold_for("ko") < 0.8393, (
+            f"ko 임계값 {s.threshold_for('ko')} 이 계층C 함정 점수대까지 올라왔습니다. "
+            "함정을 게이트로 막으려 하면 정상 질의가 함께 폴백됩니다."
         )
 
     def test_margin_disabled(self):
@@ -187,10 +206,9 @@ class TestHybridSearch:
 
 
 class TestPerLanguageThreshold:
-    """언어별 임계값 (실측 2026-08-12).
+    """언어별 임계값 (실측 2026-08-12, 질의 번역 켜짐).
 
     한국어로 보정한 값 하나만 쓰면 비한국어 질의가 **항상** 폴백된다.
-    다국어 임베딩은 같은 언어 쌍을 교차 언어 쌍보다 체계적으로 높게 주기 때문이다.
     다국어 서비스에서 이건 기능 상실이므로 회귀를 막는다.
     """
 
@@ -204,11 +222,23 @@ class TestPerLanguageThreshold:
                 "`python -m app.rag.cli --calibrate` 로 재보정하세요."
             )
 
-    def test_non_korean_thresholds_are_lower(self):
-        """교차 언어 점수는 체계적으로 낮다 — 같은 값을 쓰면 전부 폴백된다."""
+    def test_translation_raises_non_korean_scores(self):
+        """★ 번역이 켜지면서 관계가 **뒤집혔다.**
+
+        번역 전에는 교차 언어 점수가 체계적으로 낮아 비한국어 임계값을 더
+        낮게 뒀다. 번역 후에는 질의가 한국어 검색어로 정제되어 오히려 **높다**
+        (vi 코퍼스 안 최소: 0.7956 → 0.8520). 옛 규칙("비한국어는 더 낮게")을
+        되살리면 비한국어 무근거 질의가 전부 통과하므로 여기서 막는다.
+        """
         s = get_settings()
         for lang in ("en", "vi"):
-            assert s.threshold_for(lang) < s.threshold_for("ko")
+            assert s.threshold_for(lang) > s.threshold_for("ko"), (
+                f"{lang} 임계값이 ko 보다 낮습니다. 번역이 켜진 뒤로는 비한국어 "
+                "점수가 더 높게 나오므로, 낮은 임계값은 무근거 질의를 통과시킵니다."
+            )
 
     def test_unknown_language_falls_back_to_global(self):
-        assert get_settings().threshold_for("th") == get_settings().threshold_top1
+        """보정하지 않은 언어는 **보수적으로** 높은 전역값을 쓴다."""
+        s = get_settings()
+        assert s.threshold_for("th") == s.threshold_top1
+        assert s.threshold_top1 > max(s.threshold_top1_by_lang.values())
