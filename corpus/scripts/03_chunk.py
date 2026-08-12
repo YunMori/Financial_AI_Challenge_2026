@@ -249,6 +249,10 @@ def main() -> int:
             print(f"    {doc_id}")
         print("  원문을 눈으로 확인한 뒤 corpus/manifest.json 의 verified_at 을 채우세요.")
         print("  ★ 이 값이 비면 화면의 시점 경고(§8.4)가 동작하지 않습니다.")
+        # 청커가 보는 것은 processed/*.md 의 front-matter 이고, 그 값은 02_clean 이
+        # 매니페스트에서 옮겨 적는다. 매니페스트만 고치고 여기로 오면 같은 경고가
+        # 다시 나온다 — 실제로 한 번 겪었다.
+        print("  → 채운 뒤 02_clean.py 를 다시 돌려야 front-matter 에 반영됩니다.")
     return 0
 
 

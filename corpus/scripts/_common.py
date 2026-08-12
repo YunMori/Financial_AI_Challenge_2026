@@ -128,6 +128,9 @@ class Source:
     license_note: str = ""
     priority: Literal["P0", "P1", "P2", "P3"] = "P0"
     legacy_tls: bool = False
+    # THIN 판정을 면제한다. **추출은 성공했는데 원문이 짧은** 경우에만 쓰고,
+    # note 에 근거를 남긴다. 이유 없이 붙이면 THIN 경보 자체가 무의미해진다.
+    allow_short: bool = False
     note: str = ""
 
     @property
