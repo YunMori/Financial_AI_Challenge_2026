@@ -50,6 +50,14 @@ class PipelineEvent:
 
     kind: str  # "meta" | "token" | "final"
     meta: RetrievalMeta | None = None
+    # 검색된 청크 ID. **응답에는 넣지 않는다** — 이용자에게 필요한 것은 출처이지
+    # 내부 식별자가 아니다. Recall@5 를 재려면 평가기가 이 값을 봐야 하고,
+    # 폴백된 질의에도 담아야 "검색이 실패한 것"과 "임계값이 높은 것"을 가른다.
+    chunk_ids: list[str] = field(default_factory=list)
+    # 검색 신뢰도 점수. **모든 이벤트에 싣는다** — `meta` 는 임계값을 통과한
+    # 뒤에만 나가므로, 여기에만 담으면 폴백된 질의의 점수가 어디에도 남지
+    # 않는다. 임계값을 튜닝하면서 그 입력을 못 보는 상태가 된다.
+    top1: float = 0.0
     text: str = ""
     response: FinalResponse | None = None
     stats: GenerationStats | None = None
@@ -89,6 +97,8 @@ class ChatPipeline:
         def elapsed() -> int:
             return int((time.perf_counter() - started) * 1000)
 
+        retrieved: list[str] = []
+
         def done(resp: FinalResponse, stats: GenerationStats | None = None) -> PipelineEvent:
             tel.tier = resp.tier.value
             tel.fallback_reason = resp.fallback_reason.value if resp.fallback_reason else None
@@ -99,8 +109,9 @@ class ChatPipeline:
                      tel.lang, tel.visa, tel.tier, tel.fallback_reason, tel.top1,
                      tel.n_candidates, tel.normalize_via, tel.injection_hits,
                      tel.pii_kinds, tel.latency_ms)
-            return PipelineEvent(kind="final", response=resp,
-                                 stats=stats, latency_ms=tel.latency_ms)
+            return PipelineEvent(kind="final", response=resp, stats=stats,
+                                 latency_ms=tel.latency_ms, chunk_ids=list(retrieved),
+                                 top1=tel.top1)
 
         # ── ① 입력 가드레일 ─────────────────────────────────────────
         filtered = filter_input(req.message)
@@ -136,14 +147,18 @@ class ChatPipeline:
 
         # ── ④ 검색 (⑤ 리랭킹은 M1 생략) ────────────────────────────
         result = self._retriever.search(nq.ko, visa=nq.visa)
-        tel.top1 = result.top1_dense
+        retrieved[:] = [c.chunk_id for c in result.candidates]
+        # 게이트가 보는 점수. 리랭킹이 켜져 있으면 리랭커 점수다 —
+        # dense 코사인은 안/밖 분리 폭이 음수라 게이트로 쓸 수 없다(ADR-001).
+        tel.top1 = result.confidence
         tel.n_candidates = len(result.candidates)
 
         # 언어별 임계값. 교차 언어 검색은 점수가 체계적으로 낮게 나온다.
         threshold = s.threshold_for(lang.value)
-        if result.is_empty or result.top1_dense < threshold:
-            log.info("검색 신뢰도 미달: top1=%.3f < %.3f (lang=%s)",
-                     result.top1_dense, threshold, lang.value)
+        if result.is_empty or result.confidence < threshold:
+            log.info("검색 신뢰도 미달: %s=%.3f < %.3f (lang=%s)",
+                     "rerank" if result.reranked else "top1",
+                     result.confidence, threshold, lang.value)
             yield done(make_fallback(FallbackReason.LOW_CONFIDENCE, lang))
             return
 
@@ -156,7 +171,7 @@ class ChatPipeline:
             n_candidates=result.n_before_filter,
             stale=ctx.has_stale,
             via=nq.via,
-        ))
+        ), chunk_ids=list(retrieved), top1=tel.top1)
 
         # ── ⑦ 생성 ──────────────────────────────────────────────────
         gen = None
