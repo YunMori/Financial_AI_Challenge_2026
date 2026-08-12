@@ -39,9 +39,44 @@ OUT_OF_CORPUS_QUERIES = [
     "국민연금 수령 나이",
     "제주도 맛집 추천",
     "파이썬 리스트 정렬 방법",
-    "전세자금대출 한도",
+    "전세자금대출 한도",     # 코퍼스에 '한도' 문서가 늘면 함께 올라가는 함정
     "삼성전자 주가",
 ]
+
+# 언어별 보정. 다국어 임베딩은 **같은 언어 쌍을 교차 언어 쌍보다 체계적으로
+# 높게** 주므로 한국어로 잡은 값 하나를 전 언어에 쓰면 비한국어가 전부 폴백된다.
+# ko 만 고치고 en/vi 를 두면 그 순간 언어별 값이 서로 어긋난다.
+QUERIES_BY_LANG: dict[str, tuple[list[str], list[str]]] = {
+    "ko": (IN_CORPUS_QUERIES, OUT_OF_CORPUS_QUERIES),
+    "en": (
+        [
+            "What is a limited-purpose account daily transfer limit",
+            "Documents to register as a foreign resident with a D-2 visa",
+            "Which banks accept the mobile alien registration card",
+            "Why does the bank ask my purpose of financial transaction",
+        ],
+        [
+            "How is the KOSPI index doing",
+            "Best restaurants in Jeju island",
+            "How to sort a list in Python",
+            "Jeonse loan limit for tenants",
+        ],
+    ),
+    "vi": (
+        [
+            "Hạn mức chuyển khoản hàng ngày của tài khoản hạn chế",
+            "Giấy tờ đăng ký người nước ngoài cho visa D-2",
+            "Ngân hàng nào chấp nhận thẻ đăng ký người nước ngoài di động",
+            "Tại sao ngân hàng hỏi mục đích giao dịch tài chính",
+        ],
+        [
+            "Chỉ số KOSPI hôm nay",
+            "Nhà hàng ngon ở đảo Jeju",
+            "Cách sắp xếp danh sách trong Python",
+            "Hạn mức vay mua nhà jeonse",
+        ],
+    ),
+}
 
 
 def run_query(query: str, lang: str, visa: str | None, top_n: int, verbose: bool) -> None:
@@ -106,37 +141,49 @@ def calibrate() -> None:
     """
     normalizer = QueryNormalizer()
     retriever = get_retriever()
+    settings = get_settings()
 
-    def measure(queries: list[str]) -> list[tuple[str, float, float]]:
+    def measure(queries: list[str], lang: str) -> list[tuple[str, float, float]]:
         rows = []
         for q in queries:
-            nq = normalizer.normalize(q, lang="ko")
+            nq = normalizer.normalize(q, lang=lang)
             r = retriever.search(nq.ko, visa=nq.visa)
             rows.append((q, r.top1_dense, r.margin))
         return rows
 
-    inside = measure(IN_CORPUS_QUERIES)
-    outside = measure(OUT_OF_CORPUS_QUERIES)
+    proposed: dict[str, float] = {}
+    for lang, (in_qs, out_qs) in QUERIES_BY_LANG.items():
+        inside, outside = measure(in_qs, lang), measure(out_qs, lang)
+        print(f"\n═══ {lang} ═══   {'top1_dense':>11} {'margin':>10}")
+        for label, rows in (("코퍼스 안", inside), ("코퍼스 밖", outside)):
+            print(f"── {label} ──")
+            for q, top1, margin in rows:
+                print(f"{q[:44]:46} {top1:>11.4f} {margin:>10.5f}")
 
-    print(f"{'질의':44} {'top1_dense':>11} {'margin':>10}")
-    print("─" * 68)
-    for label, rows in (("코퍼스 안", inside), ("코퍼스 밖", outside)):
-        print(f"── {label} ──")
-        for q, top1, margin in rows:
-            print(f"{q[:42]:44} {top1:>11.4f} {margin:>10.5f}")
-        print()
+        lo = min(t for _, t, _ in inside)
+        hi = max(t for _, t, _ in outside)
+        gap = lo - hi
+        print(f"  안 최소 {lo:.4f} / 밖 최대 {hi:.4f} / 분리 폭 {gap:+.4f}")
+        if gap > 0:
+            proposed[lang] = round((lo + hi) / 2, 3)
+            print(f"  → 임계값 후보 {proposed[lang]:.3f}")
+        else:
+            print("  → 두 분포가 겹칩니다. top1 단독으로는 폴백 판정을 할 수 없습니다.")
+            print("    리랭킹 도입을 앞당겨야 합니다 (ADR-001).")
 
-    in_top1 = [t for _, t, _ in inside]
-    out_top1 = [t for _, t, _ in outside]
-    print(f"코퍼스 안  top1 최소 {min(in_top1):.4f} / 평균 {sum(in_top1)/len(in_top1):.4f}")
-    print(f"코퍼스 밖  top1 최대 {max(out_top1):.4f} / 평균 {sum(out_top1)/len(out_top1):.4f}")
-    gap = min(in_top1) - max(out_top1)
-    print(f"분리 폭    {gap:+.4f}")
-    if gap > 0:
-        print(f"→ 두 분포가 분리됩니다. 임계값 후보: {(min(in_top1) + max(out_top1)) / 2:.3f}")
-    else:
-        print("→ 두 분포가 겹칩니다. top1 단독으로는 폴백 판정을 할 수 없습니다.")
-        print("  margin 을 함께 쓰거나, 리랭킹 도입을 앞당겨야 합니다.")
+    print("\n─── 현재 설정과 비교 ───")
+    stale = []
+    for lang, value in proposed.items():
+        now = settings.threshold_for(lang)
+        mark = "  " if abs(now - value) < 0.006 else "★ "
+        if mark == "★ ":
+            stale.append(f"{lang}:{value:.3f}")
+        print(f"{mark}{lang}  현재 {now:.3f}  →  실측 {value:.3f}")
+    if stale:
+        print("\n★ 표시된 언어는 실측과 어긋납니다. .env 또는 config.py 를 고치세요:")
+        print(f"    THRESHOLD_TOP1_BY_LANG={','.join(stale)}")
+        print("  ※ **한 언어만 고치지 마세요.** 언어별 값이 서로 어긋나면")
+        print("    특정 언어만 조용히 폴백되거나 조용히 통과합니다.")
     print("\n※ 잠정값입니다. 골든셋(함정 문항 포함)이 생기면 다시 잡아야 합니다.")
 
 
