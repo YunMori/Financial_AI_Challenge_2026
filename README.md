@@ -71,12 +71,22 @@ cd apps/web && npm run check-i18n
 ```bash
 # 빌드 컨텍스트는 리포 루트다 (corpus/glossary 를 담아야 하므로)
 docker build -f apps/api/Dockerfile -t kbuddy-api .
+
+# API 백엔드 (외부 생성 호출)
 docker run -p 10000:10000 -e ANTHROPIC_API_KEY=sk-ant-... kbuddy-api
+
+# 로컬 백엔드 (외부 호출 없음, GPU 권장)
+docker run -p 10000:10000 -e LLM_BACKEND=local kbuddy-api
 ```
 
-- 백엔드: Render (`render.yaml`) — **Standard(2GB) 이상 필수**. 실측 피크
-  2,096 MiB, 스타터(512MB)로는 임베딩 모델이 올라가지 않는다 (ADR-003).
+- 백엔드: **AWS 서울 리전(ap-northeast-2) 이전 중** — GPU 인스턴스(g5/g6).
+  로컬 생성 모델을 쓰면 planner §15.2 의 국내 리전 원칙이 **실제로 충족**된다
+  (ADR-004). Render 배포는 폐기했다 — 배포 경로를 둘로 두면 8주 차에 사고가 난다.
 - 프론트: Vercel (`apps/web/vercel.json`)
+
+> ⚠ **AWS 이전은 아직 실측되지 않았다.** 검증되지 않은 IaC 를 지어내지 않고,
+> 필요한 조건(리전·인스턴스·모델 가중치 사전 포함·비용 운영)을 ADR-004 에
+> 적어 두었다. 메모리·지연 실측 후 배포 설정을 확정한다.
 
 ## 문서
 
