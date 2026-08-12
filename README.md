@@ -51,11 +51,16 @@ cd ../web && npm install && npm run dev
 # 검색만 단독으로 (챗이 붙기 전 디버깅용)
 cd apps/api && .venv/bin/python -m app.rag.cli "E-9 한도제한계좌 해제 서류"
 
-# 검색 신뢰도 임계값 재보정 — 임베딩 모델을 바꾸면 반드시 실행
+# 검색 신뢰도 임계값 재보정 — 임베딩 모델이나 코퍼스를 바꾸면 반드시 실행
 .venv/bin/python -m app.rag.cli --calibrate
 
-# 테스트 (263개)
+# 테스트 (278개)
 .venv/bin/python -m pytest -q
+
+# 골든셋 자동 채점 (planner §13) — 리포트는 커밋한다
+python eval/run_eval.py --validate-only          # 스키마만
+python eval/run_eval.py --no-llm                 # 검색·판정만, 비용 0
+python eval/run_eval.py --out eval/reports/exp_00N.json
 
 # 다국어 키 누락 검사
 cd apps/web && npm run check-i18n
@@ -80,7 +85,8 @@ docker run -p 10000:10000 -e ANTHROPIC_API_KEY=sk-ant-... kbuddy-api
 | `planner.md` | 8주 실행 계획서 |
 | `docs/functional-spec.md` | 기능명세서 (제출물) |
 | `docs/fact-check.md` | 기획서 수치의 1차 출처 검증 대장 (5/11 닫힘) |
-| `docs/spec-changes.md` | **기획서 수정 대상 15건** — 근거·조치 포함 |
+| `docs/spec-changes.md` | **기획서 수정 대상 23건** — 근거·조치 포함 |
+| `eval/` | 골든셋 160문항 + 자동 채점 하니스 + 실험 리포트 |
 | `docs/dev-log.md` | 실측값·결정·기획서와 어긋난 지점 |
 | `docs/adr/` | 되돌리기 어려운 결정 기록 |
 | `corpus/stats/SOURCES.md` | 통계 데이터 출처·해시 |
@@ -107,7 +113,16 @@ corpus/
 
 - 공개 언어는 **ko/en/vi 3종**. 원어민 검수를 확보한 만큼만 늘린다
   (검수되지 않은 언어는 공개하지 않는다는 원칙).
-- 검색 임계값 0.839 는 코퍼스 안/밖 각 8질의로 잡은 **잠정값**이다.
-  분리 폭이 0.02 로 좁아 골든셋 확보 후 재보정이 필요하다.
+  **언어를 늘릴 때는 계층 C 규칙(`tiering/rules.py`)과 골든셋을 함께 늘려야
+  한다.** 규칙이 한국어·영어뿐이던 동안 베트남어 함정이 계층 A 로 통과했다 —
+  번역에 기대는 2차 방어는 의도를 보존하지 못한다.
+- 검색 신뢰도 게이트가 책임지는 것은 **"근거 없음" 하나뿐**이다. 개별 심사
+  요구(계층 C)는 주제상 관련이 있어 검색 점수가 높게 나오는 것이 정상이므로,
+  게이트가 아니라 ②규칙·⑨계층 판정이 막는다 (ADR-001).
+  임계값은 골든셋 100문항 실측: ko 0.8246 / vi 0.8321 / en 0.8445.
+  **en·vi 는 무근거 표본이 2건·1건뿐이라 잠정값**이다.
+- **리랭킹은 넣지 않는다** (ADR-001). `jina-reranker-v2` 가 Recall@5 를
+  93.8% → 96.9% 로 올리지만 질의당 6.8초를 더 써 지연 예산을 두 배로 넘긴다.
+- **지연이 예산을 넘는다**: p50 6.2초 / p95 17.8초 (목표 P95 6초). 미해결.
 - 요건 매트릭스는 대부분 `unknown` 이다. 은행별 계좌개설 요건의 공식 근거를
   확보하지 못했고, **추정으로 채우면 그 자체가 환각**이므로 비워 둔다.

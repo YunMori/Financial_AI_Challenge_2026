@@ -100,7 +100,7 @@ class AnthropicClient:
                 # ★ 안정 프리픽스만 캐시한다. 근거는 user 메시지에 있다.
                 "cache_control": {"type": "ephemeral"},
             }],
-            thinking={"type": "adaptive"},
+            thinking={"type": s.llm_thinking},
             output_config={
                 "effort": s.llm_effort,
                 "format": {

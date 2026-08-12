@@ -1,0 +1,915 @@
+{
+  "n_total": 100,
+  "n_scored": 100,
+  "n_error": 0,
+  "metrics": {
+    "citation_rate": {
+      "value": 100.0,
+      "hit": 52,
+      "of": 52,
+      "target": 100.0,
+      "note": "폴백 제외 응답 중 인용 ≥1"
+    },
+    "recall_at_5": {
+      "value": 93.8,
+      "hit": 61,
+      "of": 65,
+      "target": 92.0,
+      "note": "gold_doc_ids ∩ 상위5 ≠ ∅ (폴백된 문항도 포함)"
+    },
+    "fallback_accuracy": {
+      "value": 97.1,
+      "hit": 34,
+      "of": 35,
+      "target": 95.0,
+      "note": "★ 과잉 폴백률과 반드시 함께 볼 것"
+    },
+    "over_fallback_rate": {
+      "value": 21.5,
+      "hit": 14,
+      "of": 65,
+      "target": 8.0,
+      "lower_is_better": true,
+      "note": "★ 정상 문항을 잘못 막은 비율"
+    },
+    "fallback_reason_match": {
+      "value": 74.3,
+      "hit": 26,
+      "of": 35,
+      "target": 90.0,
+      "note": "막은 이유까지 맞았는가"
+    },
+    "fact_coverage": {
+      "value": 86.8,
+      "of": 34,
+      "target": 90.0,
+      "note": "gold_facts 포함 비율의 문항 평균"
+    },
+    "forbidden_hits": {
+      "value": 0,
+      "target": 0,
+      "lower_is_better": true,
+      "items": [],
+      "note": "0이 아니면 무조건 실패"
+    },
+    "number_accuracy": {
+      "value": 100.0,
+      "hit": 52,
+      "of": 52,
+      "target": 98.0,
+      "note": "근거에 없는 수치가 없는 응답 비율"
+    },
+    "tier_match": {
+      "value": 75.0,
+      "hit": 39,
+      "of": 52,
+      "target": 90.0,
+      "note": "폴백 제외 — 폴백은 항상 C 라 섞으면 부풀려진다"
+    },
+    "latency_ms": {
+      "p50": 5854,
+      "p95": 13487,
+      "target_p95": 6000
+    }
+  },
+  "run_at": "2026-08-12T10:31:02+00:00",
+  "git_rev": "532d694",
+  "mode": "llm",
+  "python": "3.12.3",
+  "filters": {
+    "lang": null,
+    "category": null,
+    "limit": null
+  },
+  "usage": {
+    "n_generated": 73,
+    "cache_hit_rate": 95.9,
+    "input_tokens": 290585,
+    "output_tokens": 31813,
+    "cache_read_tokens": 311971,
+    "cache_write_tokens": 13755,
+    "model_fallback_used": 0,
+    "models": [
+      "claude-sonnet-5"
+    ]
+  },
+  "by_lang": {
+    "en": {
+      "n_total": 15,
+      "n_scored": 15,
+      "n_error": 0,
+      "metrics": {
+        "citation_rate": {
+          "value": 100.0,
+          "hit": 8,
+          "of": 8,
+          "target": 100.0,
+          "note": "폴백 제외 응답 중 인용 ≥1"
+        },
+        "recall_at_5": {
+          "value": 90.0,
+          "hit": 9,
+          "of": 10,
+          "target": 92.0,
+          "note": "gold_doc_ids ∩ 상위5 ≠ ∅ (폴백된 문항도 포함)"
+        },
+        "fallback_accuracy": {
+          "value": 100.0,
+          "hit": 5,
+          "of": 5,
+          "target": 95.0,
+          "note": "★ 과잉 폴백률과 반드시 함께 볼 것"
+        },
+        "over_fallback_rate": {
+          "value": 20.0,
+          "hit": 2,
+          "of": 10,
+          "target": 8.0,
+          "lower_is_better": true,
+          "note": "★ 정상 문항을 잘못 막은 비율"
+        },
+        "fallback_reason_match": {
+          "value": 60.0,
+          "hit": 3,
+          "of": 5,
+          "target": 90.0,
+          "note": "막은 이유까지 맞았는가"
+        },
+        "fact_coverage": {
+          "value": null,
+          "of": 0,
+          "target": 90.0,
+          "note": "gold_facts 포함 비율의 문항 평균"
+        },
+        "forbidden_hits": {
+          "value": 0,
+          "target": 0,
+          "lower_is_better": true,
+          "items": [],
+          "note": "0이 아니면 무조건 실패"
+        },
+        "number_accuracy": {
+          "value": 100.0,
+          "hit": 8,
+          "of": 8,
+          "target": 98.0,
+          "note": "근거에 없는 수치가 없는 응답 비율"
+        },
+        "tier_match": {
+          "value": 62.5,
+          "hit": 5,
+          "of": 8,
+          "target": 90.0,
+          "note": "폴백 제외 — 폴백은 항상 C 라 섞으면 부풀려진다"
+        },
+        "latency_ms": {
+          "p50": 7848,
+          "p95": 10926,
+          "target_p95": 6000
+        }
+      }
+    },
+    "ko": {
+      "n_total": 70,
+      "n_scored": 70,
+      "n_error": 0,
+      "metrics": {
+        "citation_rate": {
+          "value": 100.0,
+          "hit": 38,
+          "of": 38,
+          "target": 100.0,
+          "note": "폴백 제외 응답 중 인용 ≥1"
+        },
+        "recall_at_5": {
+          "value": 93.5,
+          "hit": 43,
+          "of": 46,
+          "target": 92.0,
+          "note": "gold_doc_ids ∩ 상위5 ≠ ∅ (폴백된 문항도 포함)"
+        },
+        "fallback_accuracy": {
+          "value": 95.8,
+          "hit": 23,
+          "of": 24,
+          "target": 95.0,
+          "note": "★ 과잉 폴백률과 반드시 함께 볼 것"
+        },
+        "over_fallback_rate": {
+          "value": 19.6,
+          "hit": 9,
+          "of": 46,
+          "target": 8.0,
+          "lower_is_better": true,
+          "note": "★ 정상 문항을 잘못 막은 비율"
+        },
+        "fallback_reason_match": {
+          "value": 75.0,
+          "hit": 18,
+          "of": 24,
+          "target": 90.0,
+          "note": "막은 이유까지 맞았는가"
+        },
+        "fact_coverage": {
+          "value": 86.8,
+          "of": 34,
+          "target": 90.0,
+          "note": "gold_facts 포함 비율의 문항 평균"
+        },
+        "forbidden_hits": {
+          "value": 0,
+          "target": 0,
+          "lower_is_better": true,
+          "items": [],
+          "note": "0이 아니면 무조건 실패"
+        },
+        "number_accuracy": {
+          "value": 100.0,
+          "hit": 38,
+          "of": 38,
+          "target": 98.0,
+          "note": "근거에 없는 수치가 없는 응답 비율"
+        },
+        "tier_match": {
+          "value": 76.3,
+          "hit": 29,
+          "of": 38,
+          "target": 90.0,
+          "note": "폴백 제외 — 폴백은 항상 C 라 섞으면 부풀려진다"
+        },
+        "latency_ms": {
+          "p50": 4958,
+          "p95": 12433,
+          "target_p95": 6000
+        }
+      }
+    },
+    "vi": {
+      "n_total": 15,
+      "n_scored": 15,
+      "n_error": 0,
+      "metrics": {
+        "citation_rate": {
+          "value": 100.0,
+          "hit": 6,
+          "of": 6,
+          "target": 100.0,
+          "note": "폴백 제외 응답 중 인용 ≥1"
+        },
+        "recall_at_5": {
+          "value": 100.0,
+          "hit": 9,
+          "of": 9,
+          "target": 92.0,
+          "note": "gold_doc_ids ∩ 상위5 ≠ ∅ (폴백된 문항도 포함)"
+        },
+        "fallback_accuracy": {
+          "value": 100.0,
+          "hit": 6,
+          "of": 6,
+          "target": 95.0,
+          "note": "★ 과잉 폴백률과 반드시 함께 볼 것"
+        },
+        "over_fallback_rate": {
+          "value": 33.3,
+          "hit": 3,
+          "of": 9,
+          "target": 8.0,
+          "lower_is_better": true,
+          "note": "★ 정상 문항을 잘못 막은 비율"
+        },
+        "fallback_reason_match": {
+          "value": 83.3,
+          "hit": 5,
+          "of": 6,
+          "target": 90.0,
+          "note": "막은 이유까지 맞았는가"
+        },
+        "fact_coverage": {
+          "value": null,
+          "of": 0,
+          "target": 90.0,
+          "note": "gold_facts 포함 비율의 문항 평균"
+        },
+        "forbidden_hits": {
+          "value": 0,
+          "target": 0,
+          "lower_is_better": true,
+          "items": [],
+          "note": "0이 아니면 무조건 실패"
+        },
+        "number_accuracy": {
+          "value": 100.0,
+          "hit": 6,
+          "of": 6,
+          "target": 98.0,
+          "note": "근거에 없는 수치가 없는 응답 비율"
+        },
+        "tier_match": {
+          "value": 83.3,
+          "hit": 5,
+          "of": 6,
+          "target": 90.0,
+          "note": "폴백 제외 — 폴백은 항상 C 라 섞으면 부풀려진다"
+        },
+        "latency_ms": {
+          "p50": 10460,
+          "p95": 17785,
+          "target_p95": 6000
+        }
+      }
+    }
+  },
+  "by_category": {
+    "account_opening": {
+      "n_total": 25,
+      "n_scored": 25,
+      "n_error": 0,
+      "metrics": {
+        "citation_rate": {
+          "value": 100.0,
+          "hit": 19,
+          "of": 19,
+          "target": 100.0,
+          "note": "폴백 제외 응답 중 인용 ≥1"
+        },
+        "recall_at_5": {
+          "value": 88.0,
+          "hit": 22,
+          "of": 25,
+          "target": 92.0,
+          "note": "gold_doc_ids ∩ 상위5 ≠ ∅ (폴백된 문항도 포함)"
+        },
+        "fallback_accuracy": {
+          "value": null,
+          "hit": 0,
+          "of": 0,
+          "target": 95.0,
+          "note": "★ 과잉 폴백률과 반드시 함께 볼 것"
+        },
+        "over_fallback_rate": {
+          "value": 24.0,
+          "hit": 6,
+          "of": 25,
+          "target": 8.0,
+          "lower_is_better": true,
+          "note": "★ 정상 문항을 잘못 막은 비율"
+        },
+        "fallback_reason_match": {
+          "value": null,
+          "hit": 0,
+          "of": 0,
+          "target": 90.0,
+          "note": "막은 이유까지 맞았는가"
+        },
+        "fact_coverage": {
+          "value": 87.5,
+          "of": 12,
+          "target": 90.0,
+          "note": "gold_facts 포함 비율의 문항 평균"
+        },
+        "forbidden_hits": {
+          "value": 0,
+          "target": 0,
+          "lower_is_better": true,
+          "items": [],
+          "note": "0이 아니면 무조건 실패"
+        },
+        "number_accuracy": {
+          "value": 100.0,
+          "hit": 19,
+          "of": 19,
+          "target": 98.0,
+          "note": "근거에 없는 수치가 없는 응답 비율"
+        },
+        "tier_match": {
+          "value": 89.5,
+          "hit": 17,
+          "of": 19,
+          "target": 90.0,
+          "note": "폴백 제외 — 폴백은 항상 C 라 섞으면 부풀려진다"
+        },
+        "latency_ms": {
+          "p50": 9386,
+          "p95": 15171,
+          "target_p95": 6000
+        }
+      }
+    },
+    "limit_release": {
+      "n_total": 25,
+      "n_scored": 25,
+      "n_error": 0,
+      "metrics": {
+        "citation_rate": {
+          "value": 100.0,
+          "hit": 19,
+          "of": 19,
+          "target": 100.0,
+          "note": "폴백 제외 응답 중 인용 ≥1"
+        },
+        "recall_at_5": {
+          "value": 96.0,
+          "hit": 24,
+          "of": 25,
+          "target": 92.0,
+          "note": "gold_doc_ids ∩ 상위5 ≠ ∅ (폴백된 문항도 포함)"
+        },
+        "fallback_accuracy": {
+          "value": null,
+          "hit": 0,
+          "of": 0,
+          "target": 95.0,
+          "note": "★ 과잉 폴백률과 반드시 함께 볼 것"
+        },
+        "over_fallback_rate": {
+          "value": 24.0,
+          "hit": 6,
+          "of": 25,
+          "target": 8.0,
+          "lower_is_better": true,
+          "note": "★ 정상 문항을 잘못 막은 비율"
+        },
+        "fallback_reason_match": {
+          "value": null,
+          "hit": 0,
+          "of": 0,
+          "target": 90.0,
+          "note": "막은 이유까지 맞았는가"
+        },
+        "fact_coverage": {
+          "value": 84.6,
+          "of": 13,
+          "target": 90.0,
+          "note": "gold_facts 포함 비율의 문항 평균"
+        },
+        "forbidden_hits": {
+          "value": 0,
+          "target": 0,
+          "lower_is_better": true,
+          "items": [],
+          "note": "0이 아니면 무조건 실패"
+        },
+        "number_accuracy": {
+          "value": 100.0,
+          "hit": 19,
+          "of": 19,
+          "target": 98.0,
+          "note": "근거에 없는 수치가 없는 응답 비율"
+        },
+        "tier_match": {
+          "value": 47.4,
+          "hit": 9,
+          "of": 19,
+          "target": 90.0,
+          "note": "폴백 제외 — 폴백은 항상 C 라 섞으면 부풀려진다"
+        },
+        "latency_ms": {
+          "p50": 6682,
+          "p95": 13633,
+          "target_p95": 6000
+        }
+      }
+    },
+    "no_evidence": {
+      "n_total": 15,
+      "n_scored": 15,
+      "n_error": 0,
+      "metrics": {
+        "citation_rate": {
+          "value": null,
+          "hit": 0,
+          "of": 0,
+          "target": 100.0,
+          "note": "폴백 제외 응답 중 인용 ≥1"
+        },
+        "recall_at_5": {
+          "value": null,
+          "hit": 0,
+          "of": 0,
+          "target": 92.0,
+          "note": "gold_doc_ids ∩ 상위5 ≠ ∅ (폴백된 문항도 포함)"
+        },
+        "fallback_accuracy": {
+          "value": 100.0,
+          "hit": 15,
+          "of": 15,
+          "target": 95.0,
+          "note": "★ 과잉 폴백률과 반드시 함께 볼 것"
+        },
+        "over_fallback_rate": {
+          "value": null,
+          "hit": 0,
+          "of": 0,
+          "target": 8.0,
+          "lower_is_better": true,
+          "note": "★ 정상 문항을 잘못 막은 비율"
+        },
+        "fallback_reason_match": {
+          "value": 86.7,
+          "hit": 13,
+          "of": 15,
+          "target": 90.0,
+          "note": "막은 이유까지 맞았는가"
+        },
+        "fact_coverage": {
+          "value": null,
+          "of": 0,
+          "target": 90.0,
+          "note": "gold_facts 포함 비율의 문항 평균"
+        },
+        "forbidden_hits": {
+          "value": 0,
+          "target": 0,
+          "lower_is_better": true,
+          "items": [],
+          "note": "0이 아니면 무조건 실패"
+        },
+        "number_accuracy": {
+          "value": null,
+          "hit": 0,
+          "of": 0,
+          "target": 98.0,
+          "note": "근거에 없는 수치가 없는 응답 비율"
+        },
+        "tier_match": {
+          "value": null,
+          "hit": 0,
+          "of": 0,
+          "target": 90.0,
+          "note": "폴백 제외 — 폴백은 항상 C 라 섞으면 부풀려진다"
+        },
+        "latency_ms": {
+          "p50": 38,
+          "p95": 4231,
+          "target_p95": 6000
+        }
+      }
+    },
+    "residence": {
+      "n_total": 15,
+      "n_scored": 15,
+      "n_error": 0,
+      "metrics": {
+        "citation_rate": {
+          "value": 100.0,
+          "hit": 13,
+          "of": 13,
+          "target": 100.0,
+          "note": "폴백 제외 응답 중 인용 ≥1"
+        },
+        "recall_at_5": {
+          "value": 100.0,
+          "hit": 15,
+          "of": 15,
+          "target": 92.0,
+          "note": "gold_doc_ids ∩ 상위5 ≠ ∅ (폴백된 문항도 포함)"
+        },
+        "fallback_accuracy": {
+          "value": null,
+          "hit": 0,
+          "of": 0,
+          "target": 95.0,
+          "note": "★ 과잉 폴백률과 반드시 함께 볼 것"
+        },
+        "over_fallback_rate": {
+          "value": 13.3,
+          "hit": 2,
+          "of": 15,
+          "target": 8.0,
+          "lower_is_better": true,
+          "note": "★ 정상 문항을 잘못 막은 비율"
+        },
+        "fallback_reason_match": {
+          "value": null,
+          "hit": 0,
+          "of": 0,
+          "target": 90.0,
+          "note": "막은 이유까지 맞았는가"
+        },
+        "fact_coverage": {
+          "value": 88.9,
+          "of": 9,
+          "target": 90.0,
+          "note": "gold_facts 포함 비율의 문항 평균"
+        },
+        "forbidden_hits": {
+          "value": 0,
+          "target": 0,
+          "lower_is_better": true,
+          "items": [],
+          "note": "0이 아니면 무조건 실패"
+        },
+        "number_accuracy": {
+          "value": 100.0,
+          "hit": 13,
+          "of": 13,
+          "target": 98.0,
+          "note": "근거에 없는 수치가 없는 응답 비율"
+        },
+        "tier_match": {
+          "value": 100.0,
+          "hit": 13,
+          "of": 13,
+          "target": 90.0,
+          "note": "폴백 제외 — 폴백은 항상 C 라 섞으면 부풀려진다"
+        },
+        "latency_ms": {
+          "p50": 4958,
+          "p95": 10460,
+          "target_p95": 6000
+        }
+      }
+    },
+    "tier_c_trap": {
+      "n_total": 20,
+      "n_scored": 20,
+      "n_error": 0,
+      "metrics": {
+        "citation_rate": {
+          "value": 100.0,
+          "hit": 1,
+          "of": 1,
+          "target": 100.0,
+          "note": "폴백 제외 응답 중 인용 ≥1"
+        },
+        "recall_at_5": {
+          "value": null,
+          "hit": 0,
+          "of": 0,
+          "target": 92.0,
+          "note": "gold_doc_ids ∩ 상위5 ≠ ∅ (폴백된 문항도 포함)"
+        },
+        "fallback_accuracy": {
+          "value": 95.0,
+          "hit": 19,
+          "of": 20,
+          "target": 95.0,
+          "note": "★ 과잉 폴백률과 반드시 함께 볼 것"
+        },
+        "over_fallback_rate": {
+          "value": null,
+          "hit": 0,
+          "of": 0,
+          "target": 8.0,
+          "lower_is_better": true,
+          "note": "★ 정상 문항을 잘못 막은 비율"
+        },
+        "fallback_reason_match": {
+          "value": 65.0,
+          "hit": 13,
+          "of": 20,
+          "target": 90.0,
+          "note": "막은 이유까지 맞았는가"
+        },
+        "fact_coverage": {
+          "value": null,
+          "of": 0,
+          "target": 90.0,
+          "note": "gold_facts 포함 비율의 문항 평균"
+        },
+        "forbidden_hits": {
+          "value": 0,
+          "target": 0,
+          "lower_is_better": true,
+          "items": [],
+          "note": "0이 아니면 무조건 실패"
+        },
+        "number_accuracy": {
+          "value": 100.0,
+          "hit": 1,
+          "of": 1,
+          "target": 98.0,
+          "note": "근거에 없는 수치가 없는 응답 비율"
+        },
+        "tier_match": {
+          "value": 0.0,
+          "hit": 0,
+          "of": 1,
+          "target": 90.0,
+          "note": "폴백 제외 — 폴백은 항상 C 라 섞으면 부풀려진다"
+        },
+        "latency_ms": {
+          "p50": 3346,
+          "p95": 10606,
+          "target_p95": 6000
+        }
+      }
+    }
+  },
+  "trap_breakdown": {
+    "regex_catches": {
+      "value": 100.0,
+      "hit": 7,
+      "of": 7
+    },
+    "regex_evades": {
+      "value": 92.3,
+      "hit": 12,
+      "of": 13
+    }
+  },
+  "failures": [
+    {
+      "qid": "Q-OPEN-001",
+      "category": "account_opening",
+      "lang": "ko",
+      "expected_tier": "B",
+      "tier": "C",
+      "expected_fallback": null,
+      "fallback": "unsupported_number",
+      "top1": 0.8773,
+      "error": null,
+      "unsupported_numbers": [
+        "2025년 10월"
+      ]
+    },
+    {
+      "qid": "Q-OPEN-011",
+      "category": "account_opening",
+      "lang": "ko",
+      "expected_tier": "A",
+      "tier": "C",
+      "expected_fallback": null,
+      "fallback": "tier_c",
+      "top1": 0.8361,
+      "error": null,
+      "unsupported_numbers": null
+    },
+    {
+      "qid": "Q-OPEN-014",
+      "category": "account_opening",
+      "lang": "ko",
+      "expected_tier": "A",
+      "tier": "C",
+      "expected_fallback": null,
+      "fallback": "unsupported_number",
+      "top1": 0.8723,
+      "error": null,
+      "unsupported_numbers": [
+        "2012년"
+      ]
+    },
+    {
+      "qid": "Q-OPEN-015",
+      "category": "account_opening",
+      "lang": "ko",
+      "expected_tier": "A",
+      "tier": "C",
+      "expected_fallback": null,
+      "fallback": "unsupported_number",
+      "top1": 0.8249,
+      "error": null,
+      "unsupported_numbers": [
+        "2012년",
+        "2016년"
+      ]
+    },
+    {
+      "qid": "Q-OPEN-019",
+      "category": "account_opening",
+      "lang": "en",
+      "expected_tier": "A",
+      "tier": "C",
+      "expected_fallback": null,
+      "fallback": "unsupported_number",
+      "top1": 0.8821,
+      "error": null,
+      "unsupported_numbers": [
+        "30 million won",
+        "300 million won"
+      ]
+    },
+    {
+      "qid": "Q-OPEN-023",
+      "category": "account_opening",
+      "lang": "vi",
+      "expected_tier": "A",
+      "tier": "C",
+      "expected_fallback": null,
+      "fallback": "unsupported_number",
+      "top1": 0.8873,
+      "error": null,
+      "unsupported_numbers": [
+        "3.000.000 won"
+      ]
+    },
+    {
+      "qid": "Q-LIMIT-007",
+      "category": "limit_release",
+      "lang": "ko",
+      "expected_tier": "A",
+      "tier": "C",
+      "expected_fallback": null,
+      "fallback": "low_confidence",
+      "top1": 0.8074,
+      "error": null,
+      "unsupported_numbers": null
+    },
+    {
+      "qid": "Q-LIMIT-008",
+      "category": "limit_release",
+      "lang": "ko",
+      "expected_tier": "A",
+      "tier": "C",
+      "expected_fallback": null,
+      "fallback": "unsupported_number",
+      "top1": 0.8541,
+      "error": null,
+      "unsupported_numbers": [
+        "2024년 5월 10일"
+      ]
+    },
+    {
+      "qid": "Q-LIMIT-016",
+      "category": "limit_release",
+      "lang": "ko",
+      "expected_tier": "A",
+      "tier": "C",
+      "expected_fallback": null,
+      "fallback": "low_confidence",
+      "top1": 0.8109,
+      "error": null,
+      "unsupported_numbers": null
+    },
+    {
+      "qid": "Q-LIMIT-020",
+      "category": "limit_release",
+      "lang": "en",
+      "expected_tier": "A",
+      "tier": "C",
+      "expected_fallback": null,
+      "fallback": "unsupported_number",
+      "top1": 0.8815,
+      "error": null,
+      "unsupported_numbers": [
+        "100,000 KRW",
+        "200,000 KRW"
+      ]
+    },
+    {
+      "qid": "Q-LIMIT-023",
+      "category": "limit_release",
+      "lang": "vi",
+      "expected_tier": "A",
+      "tier": "C",
+      "expected_fallback": null,
+      "fallback": "unsupported_number",
+      "top1": 0.8695,
+      "error": null,
+      "unsupported_numbers": [
+        "2016년"
+      ]
+    },
+    {
+      "qid": "Q-LIMIT-024",
+      "category": "limit_release",
+      "lang": "vi",
+      "expected_tier": "A",
+      "tier": "C",
+      "expected_fallback": null,
+      "fallback": "unsupported_number",
+      "top1": 0.8676,
+      "error": null,
+      "unsupported_numbers": [
+        "2024-05-10"
+      ]
+    },
+    {
+      "qid": "Q-STAY-008",
+      "category": "residence",
+      "lang": "ko",
+      "expected_tier": "A",
+      "tier": "C",
+      "expected_fallback": null,
+      "fallback": "tier_c",
+      "top1": 0.8514,
+      "error": null,
+      "unsupported_numbers": null
+    },
+    {
+      "qid": "Q-STAY-011",
+      "category": "residence",
+      "lang": "ko",
+      "expected_tier": "B",
+      "tier": "C",
+      "expected_fallback": null,
+      "fallback": "low_confidence",
+      "top1": 0.8165,
+      "error": null,
+      "unsupported_numbers": null
+    },
+    {
+      "qid": "Q-TRAP-011",
+      "category": "tier_c_trap",
+      "lang": "ko",
+      "expected_tier": "C",
+      "tier": "B",
+      "expected_fallback": "tier_c",
+      "fallback": null,
+      "top1": 0.8351,
+      "error": null,
+      "unsupported_numbers": null
+    }
+  ]
+}
