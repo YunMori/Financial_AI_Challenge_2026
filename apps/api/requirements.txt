@@ -30,6 +30,22 @@ pyyaml~=6.0
 # 6주 차에 처음 마주치면 늦는다 — planner §15.4 가 지적한 최빈 배포 사고.
 weasyprint~=63.0
 
+# ── 로컬 생성 모델 (LLM_BACKEND=local, ADR-004) ──────────────────────
+# 개발은 mps(Apple Silicon), 배포는 cuda(AWS g5/g6) — **같은 코드 경로**로
+# 양쪽을 돌린다. vLLM 은 처리량이 좋지만 MPS 를 지원하지 않아 개발과 배포가
+# 갈라지므로 쓰지 않는다(단일 사용자 데모라 처리량이 병목이 아니다).
+torch~=2.13
+transformers~=4.57
+accelerate~=1.14
+# 구조화 출력 강제. 문법 제약이 없으면 citations·numbers_used 가 깨지고
+# 인용 검사·숫자 대조가 통째로 무력해진다 — 이 백엔드의 성패가 여기 걸린다.
+xgrammar~=0.2
+
+# ⚠ transformers 가 tokenizers 를 올리면서 chromadb 0.5.23 의 선언
+#   (`tokenizers<=0.20.3`)과 충돌한다는 pip 경고가 뜬다. **실동작은 정상**이다 —
+#   검색 회귀(Recall@5 93.9% / 과잉폴백 6.1%)가 설치 전후로 동일했다.
+#   chromadb 쪽 선언이 보수적인 것이므로 버전을 내리지 않는다.
+
 # ── 테스트 ───────────────────────────────────────────────────────────
 pytest~=8.3
 pytest-asyncio~=0.24
