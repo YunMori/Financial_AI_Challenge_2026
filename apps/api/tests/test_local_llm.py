@@ -97,15 +97,25 @@ class TestFailsLoudly:
     """
 
     @pytest.mark.asyncio
-    async def test_generation_not_implemented_yet(self):
-        """Step 2 이전. 모델을 올리지 않고도 확인된다."""
+    async def test_generation_wraps_failure(self, monkeypatch):
+        """생성 실패도 프로토콜 예외로 좁혀 올린다.
+
+        ★ 이 테스트는 원래 "Step 2 미구현"을 보고 있었다. 구현 후에는 CPU 로
+        4B 를 올리려다 실패해서 통과하는 상태가 됐다 — `test_translate_wraps_
+        load_failure` 에서 지적한 함정을 같은 파일 안에서 반복한 것이다.
+        로드를 가짜로 실패시켜 **경로만** 본다.
+        """
         from app.llm.base import GenerationFailed
         from app.schemas.common import Lang
 
+        client = LocalLLMClient(device="cpu")
+
+        def boom() -> None:
+            raise RuntimeError("가짜 로드 실패")
+
+        monkeypatch.setattr(client, "_load", boom)
         with pytest.raises(GenerationFailed):
-            async for _ in LocalLLMClient(device="cpu").stream(
-                system="s", user="u", lang=Lang.KO,
-            ):
+            async for _ in client.stream(system="s", user="u", lang=Lang.KO):
                 pass
 
     @pytest.mark.asyncio
@@ -159,3 +169,44 @@ class TestSearchTermCleaning:
         from app.llm.local_client import _clean_search_terms
 
         assert "E-9" in _clean_search_terms("검색어: E-9 비전문취업 계좌개설")
+
+
+class TestGrammarRequiresAllFields:
+    """★ 선택 필드는 문법이 생략을 허용한다 — 안전장치가 조용히 꺼진다.
+
+    `LLMAnswer.citations` 는 `default_factory=list` 라 JSON 스키마의 `required`
+    에 들어가지 않는다. 문법은 그걸 그대로 반영해 생략을 허용하고, 실측에서
+    Qwen3-4B 는 `answer`·`tier`·`numbers_used` 를 채우고 **citations 를 통째로
+    건너뛰었다** → 인용 0건 → 후처리 차단 → 정상 답변이 `no_citation` 폴백.
+
+    Anthropic 경로가 멀쩡했던 것은 Claude 가 지시를 따라 채웠기 때문이지
+    스키마가 강제해서가 아니다 — 모델의 선의에 기대고 있던 자리다.
+    """
+
+    def test_all_top_level_fields_become_required(self):
+        from app.llm.local_client import _require_all_fields
+        from app.schemas.llm import LLMAnswer
+
+        raw = LLMAnswer.model_json_schema()
+        assert "citations" not in raw.get("required", []), "전제가 바뀌었다면 이 테스트를 다시 보라"
+
+        strict = _require_all_fields(raw)
+        for field in ("answer", "tier", "citations", "numbers_used"):
+            assert field in strict["required"], f"{field} 가 필수가 아니면 생략될 수 있다"
+
+    def test_nested_citation_fields_are_required(self):
+        """`citations` 안의 ref·used_for 도 강제해야 인용이 반쪽이 되지 않는다."""
+        from app.llm.local_client import _require_all_fields
+        from app.schemas.llm import LLMAnswer
+
+        strict = _require_all_fields(LLMAnswer.model_json_schema())
+        citation = strict["$defs"]["Citation"]
+        assert set(citation["required"]) >= {"ref", "used_for"}
+
+    def test_pydantic_model_is_not_mutated(self):
+        """문법만 엄격하게 만든다. 파이썬 쪽 기본값은 그대로 둔다."""
+        from app.llm.local_client import _require_all_fields
+        from app.schemas.llm import LLMAnswer
+
+        _require_all_fields(LLMAnswer.model_json_schema())
+        assert LLMAnswer(answer="a", tier="A").citations == []
