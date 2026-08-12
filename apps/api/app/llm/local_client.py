@@ -189,9 +189,9 @@ class LocalLLMClient:
         """
         import asyncio
 
-        from app.llm.prompts import NORMALIZE_PROMPT
+        from app.llm.prompts import normalize_prompt
 
-        prompt = NORMALIZE_PROMPT.format(lang=lang, query=query)
+        prompt = normalize_prompt(query, lang)
         try:
             text = await asyncio.to_thread(self._generate_text, prompt, NORMALIZE_MAX_NEW_TOKENS)
         except Exception as e:  # noqa: BLE001 - 원인을 프로토콜 예외로 좁힌다
@@ -208,19 +208,23 @@ class LocalLLMClient:
         """
         self._load()
         messages = [{"role": "user", "content": prompt}]
-        inputs = self._tokenizer.apply_chat_template(
+        # `return_dict=True` 로 받아 **attention_mask 를 함께 넘긴다.** 빼면
+        # pad 와 eos 가 같은 토큰이라 모델이 마스크를 추론하지 못하고,
+        # transformers 가 "unexpected behavior" 를 경고한다.
+        enc = self._tokenizer.apply_chat_template(
             messages, add_generation_prompt=True, return_tensors="pt",
-            enable_thinking=False,
+            return_dict=True,
         ).to(self.device)
 
         out = self._model.generate(
-            inputs,
+            **enc,
             max_new_tokens=max_new_tokens,
             do_sample=False,
             pad_token_id=self._tokenizer.eos_token_id,
         )
         # 프롬프트 부분을 잘라내고 새로 생성된 토큰만 디코딩한다.
-        return self._tokenizer.decode(out[0][inputs.shape[-1]:], skip_special_tokens=True)
+        prompt_len = enc["input_ids"].shape[-1]
+        return self._tokenizer.decode(out[0][prompt_len:], skip_special_tokens=True)
 
 
 def build_local_client() -> LocalLLMClient:

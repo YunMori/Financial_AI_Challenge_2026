@@ -28,7 +28,7 @@ from app.llm.base import (
     GenerationStats,
     StreamEvent,
 )
-from app.llm.prompts import NORMALIZE_PROMPT
+from app.llm.prompts import normalize_prompt
 from app.schemas.common import Lang
 from app.schemas.llm import LLMAnswer
 from app.streaming.partial_json import AnswerStreamer
@@ -153,7 +153,7 @@ class AnthropicClient:
             model=self._settings.llm_model_small,
             max_tokens=NORMALIZE_MAX_TOKENS,
             messages=[{"role": "user",
-                       "content": NORMALIZE_PROMPT.format(lang=lang, query=query)}],
+                       "content": normalize_prompt(query, lang)}],
         )
         if getattr(message, "stop_reason", None) == "refusal":
             raise GenerationRefused()
