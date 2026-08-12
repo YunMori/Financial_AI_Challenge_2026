@@ -240,3 +240,59 @@ class TestForbiddenPatterns:
     def test_detects_credential_request(self):
         assert find_credential_request("비밀번호를 입력해 주세요") is not None
         assert find_credential_request("외국인등록증을 지참하세요") is None
+
+
+class TestTierCMultilingual:
+    """★ 계층 C 규칙이 베트남어에서는 **아예 없었다.**
+
+    설계는 "정규화 후 한국어 검색어로 2차 방어"였는데, 정규화는 검색어를
+    만드는 것이지 의도를 보존하지 않는다. exp_005(골든셋 160문항)에서
+    vi 함정 3건이 **계층 A** 로, 즉 확신을 갖고 답변됐다.
+    놓친 것이 "어느 은행이 제일 좋나요"와 "이 문자 진짜인가요" —
+    이 서비스가 존재하는 이유에 해당하는 두 질문이다.
+    """
+
+    @pytest.mark.parametrize(
+        "text,reason",
+        [
+            ("Ngân hàng nào tốt nhất cho người nước ngoài?", BlockReason.RANKING),
+            ("Tôi nên chọn ngân hàng nào?", BlockReason.RANKING),
+            ("Tôi nhận được tin nhắn nói tài khoản bị khóa, có thật không?",
+             BlockReason.SCAM_VERDICT),
+            ("Hồ sơ của tôi có được duyệt không?", BlockReason.INDIVIDUAL_APPROVAL),
+        ],
+    )
+    def test_vietnamese_traps_are_blocked(self, text, reason):
+        assert match_tier_c(text) == reason
+
+    @pytest.mark.parametrize(
+        "text",
+        [
+            # `có thể … không` 은 베트남어의 일반 의문문이다. 문형으로 잡으면
+            # 정상 질문이 통째로 막힌다 — 실제로 오탐이 났던 문장.
+            "Có thể dùng thẻ cư trú điện tử để mở tài khoản không?",
+            "Mở tài khoản ngân hàng cần giấy tờ gì?",
+            "Tài khoản hạn chế giao dịch là gì?",
+            "Đăng ký người nước ngoài cần giấy tờ gì?",
+        ],
+    )
+    def test_normal_vietnamese_questions_pass(self, text):
+        assert match_tier_c(text) is None
+
+    def test_english_scam_question_without_the_word_scam(self):
+        """이용자는 "사기인가요"보다 "진짜인가요"라고 묻는다.
+
+        `scam` 이라는 단어를 요구하면 가장 흔한 형태를 놓친다.
+        """
+        assert match_tier_c("I got a text saying my account is frozen — is it real?") == \
+            BlockReason.SCAM_VERDICT
+
+    def test_factual_real_question_is_not_a_scam_verdict(self):
+        """"진짜인가요"를 넓게 잡되 **연락 수단**이 주어일 때만이다.
+
+        사실 확인 질문까지 막으면 정상 안내가 사라진다.
+        """
+        assert match_tier_c("Is it real that the daily limit was raised?") is None
+
+    def test_which_bank_should_i_choose_is_ranking(self):
+        assert match_tier_c("Which bank should I choose?") == BlockReason.RANKING

@@ -58,20 +58,55 @@ TIER_C_PATTERNS_EN: tuple[tuple[re.Pattern[str], BlockReason], ...] = (
                 re.I), BlockReason.INDIVIDUAL_APPROVAL),
     (re.compile(r"\bhow much\b.{0,30}?\b(can|could|will)\s+(i|we)\b.{0,20}?\b(borrow|get|loan)",
                 re.I), BlockReason.LIMIT_PREDICTION),
-    (re.compile(r"\b(which|what)\s+bank\b.{0,20}?\b(best|better|recommend)", re.I),
+    (re.compile(r"\b(which|what)\s+bank\b.{0,25}?\b(best|better|recommend|choose|should)", re.I),
      BlockReason.RANKING),
     (re.compile(r"\bis\s+(this|that|it)\b.{0,20}?\b(scam|phishing|fraud)", re.I),
      BlockReason.SCAM_VERDICT),
+    # ★ 이용자는 "사기인가요"보다 "진짜인가요"라고 묻는다. `scam` 이라는 단어를
+    #   요구하면 가장 흔한 형태를 놓친다(exp_005: `is it real?` 이 계층 A 로 통과).
+    #   다만 주어를 **연락 수단**으로 한정한다 — "is it real that the limit rose"
+    #   같은 사실 질문까지 막으면 안 된다.
+    (re.compile(r"\b(text|message|sms|call|link|email|mail)\b.{0,40}?"
+                r"\b(real|genuine|legit|legitimate|authentic)\b", re.I),
+     BlockReason.SCAM_VERDICT),
+)
+
+# 베트남어. **원래 없었다.** 정규화 후 한국어 검색어로 2차 방어한다는 설계였는데,
+# 정규화는 검색어를 만드는 것이지 의도를 보존하는 것이 아니라서 통하지 않았다 —
+# exp_005 에서 vi 함정 3건이 **계층 A** 로, 즉 확신을 갖고 답변됐다.
+# 놓친 것이 "어느 은행이 제일 좋나요"와 "이 문자 진짜인가요"였다.
+# 주 이용자층의 언어에서 서비스의 핵심 거절이 동작하지 않고 있었다.
+TIER_C_PATTERNS_VI: tuple[tuple[re.Pattern[str], BlockReason], ...] = (
+    (re.compile(r"\b(tôi|em|mình)\b.{0,40}?\b(được duyệt|có đủ|đủ điều kiện|được chấp nhận)",
+                re.I), BlockReason.INDIVIDUAL_APPROVAL),
+    # `có thể … không` 은 베트남어의 **일반 의문문 형태**다. 이걸 그대로 잡으면
+    # "모바일 등록증으로 계좌를 열 수 있나요" 같은 정상 질문이 막힌다(실측 오탐).
+    # 개별 심사 요구의 표지는 문형이 아니라 **1인칭 주어**다 — 위 패턴이 그걸 본다.
+    # 한국어 인젝션 패턴에서 `제한` 을 뺐던 것과 같은 이유다.
+    (re.compile(r"\bhạn mức\b.{0,30}?\b(bao nhiêu|là mấy)", re.I),
+     BlockReason.LIMIT_PREDICTION),
+    (re.compile(r"\bngân hàng nào\b.{0,25}?\b(tốt nhất|tốt hơn|nên|phù hợp)", re.I),
+     BlockReason.RANKING),
+    (re.compile(r"\bnên chọn\b.{0,25}?\bngân hàng\b", re.I), BlockReason.RANKING),
+    (re.compile(r"\b(tin nhắn|cuộc gọi|đường link|email|thư)\b.{0,40}?"
+                r"\b(có thật|thật không|lừa đảo|giả)", re.I),
+     BlockReason.SCAM_VERDICT),
+    (re.compile(r"\b(lừa đảo|giả mạo)\b.{0,15}?\bkhông\b", re.I), BlockReason.SCAM_VERDICT),
 )
 
 
 def match_tier_c(text: str) -> BlockReason | None:
     """계층 C 트리거를 찾는다. 없으면 None.
 
-    한국어·영어 패턴을 모두 본다. 그 외 언어는 정규화 후 한국어 검색어에
-    대해 다시 호출한다(2차 방어).
+    공개 언어(ko·en·vi) 패턴을 모두 본다. 언어를 감지해 고르지 않고 전부
+    돌리는 이유는, 질의가 섞여 들어오는 일이 흔하고("E-9 visa 인데요")
+    감지 실패가 곧 안전장치 소실이기 때문이다.
+
+    **정규화 후 한국어 검색어로 하는 2차 방어에 기대면 안 된다.** 정규화는
+    검색어를 만드는 것이지 의도를 보존하지 않는다 — 그래서 vi 함정이
+    계층 A 로 통과했다(exp_005).
     """
-    for pattern, reason in (*TIER_C_PATTERNS, *TIER_C_PATTERNS_EN):
+    for pattern, reason in (*TIER_C_PATTERNS, *TIER_C_PATTERNS_EN, *TIER_C_PATTERNS_VI):
         if pattern.search(text):
             return reason
     return None
