@@ -1,0 +1,14 @@
+# Render 콜드스타트 대응 3중 중 2번 (planner §15.3).
+#
+# **Standard 플랜에서는 슬립하지 않으므로 불필요하다.** 무료/스타터로 내려갈
+# 경우에만 확장자에서 `.disabled` 를 떼서 활성화한다.
+# 켜 두면 불필요한 요청만 늘린다.
+name: keepalive
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - run: curl -fsS "${{ secrets.API_BASE }}/healthz" || exit 1
