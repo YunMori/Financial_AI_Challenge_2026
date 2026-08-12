@@ -183,12 +183,23 @@ def _strict_schema(schema: dict[str, Any]) -> dict[str, Any]:
 
 
 def build_client():
-    """설정에 맞는 클라이언트. 키가 없으면 Null 구현체를 준다."""
+    """설정에 맞는 생성 클라이언트.
+
+    `LLM_BACKEND=local` 이면 외부 호출을 **하나도** 하지 않는 구현체를 준다
+    (ADR-004). 키 유무는 anthropic 백엔드일 때만 따진다 — 로컬 경로에서
+    키를 요구하면 "완전 로컬"이라는 주장이 성립하지 않는다.
+    """
     s = get_settings()
+    if s.llm_backend == "local":
+        from app.llm.local_client import build_local_client
+
+        return build_local_client()
+
     if not s.llm_enabled:
         from app.llm.base import NullLLMClient
 
         log.warning("ANTHROPIC_API_KEY 미설정 — 생성 기능이 비활성화됩니다 "
-                    "(검색·계층 판정은 정상 동작)")
+                    "(검색·계층 판정은 정상 동작). 로컬 모델을 쓰려면 "
+                    "LLM_BACKEND=local 로 두세요.")
         return NullLLMClient()
     return AnthropicClient()
