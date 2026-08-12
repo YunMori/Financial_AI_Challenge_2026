@@ -209,13 +209,18 @@ class ChatPipeline:
 
 def build_pipeline() -> ChatPipeline:
     from app.llm.anthropic_client import build_client
+    from app.llm.base import NullLLMClient
     from app.rag.retrieve import get_retriever
 
     llm = build_client()
-    normalizer = QueryNormalizer(
-        translator=_TranslatorAdapter(llm) if get_settings().llm_enabled else None
+    # 번역기는 **클라이언트가 실제로 생성할 수 있을 때만** 붙인다.
+    # 예전에는 `llm_enabled`(= API 키 유무)로 판단했는데, 로컬 백엔드는 키가
+    # 없으므로 그 조건이면 ③ 정규화가 조용히 꺼진 채 돌아간다 — 키가 있어도
+    # 번역이 꺼져 있던 `run_eval` 의 결함과 같은 형태다.
+    translator = None if isinstance(llm, NullLLMClient) else _TranslatorAdapter(llm)
+    return ChatPipeline(
+        llm=llm, retriever=get_retriever(), normalizer=QueryNormalizer(translator=translator)
     )
-    return ChatPipeline(llm=llm, retriever=get_retriever(), normalizer=normalizer)
 
 
 class _TranslatorAdapter:

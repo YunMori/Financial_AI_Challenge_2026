@@ -52,6 +52,11 @@ class Settings(BaseSettings):
     )
 
     # ── LLM ──────────────────────────────────────────────────────────
+    # 생성 백엔드. `local` 은 외부 호출을 **하나도** 하지 않는다 — planner §15.2 의
+    # 국내 리전 원칙이 문구 수정이 아니라 실제로 충족되는 경로다(ADR-004).
+    # `app/rag/embed.py` 의 백엔드 추상화와 같은 형태로 둔다.
+    llm_backend: Literal["anthropic", "local"] = "anthropic"
+
     anthropic_api_key: str = Field(default="", description="비어 있으면 생성 기능이 비활성화된다")
     llm_model: str = "claude-sonnet-5"
     # 장애·거절 시 위로 올린다(성공률 > 비용). ADR-002 참조
@@ -66,6 +71,21 @@ class Settings(BaseSettings):
     llm_thinking: Literal["adaptive", "disabled"] = "adaptive"
     llm_max_tokens: int = 4096
     llm_max_retries: int = 2
+
+    # ── 로컬 생성 모델 (llm_backend="local", ADR-004) ─────────────────
+    # 모델명의 **단일 출처**. embed_model 과 같은 이유로 여기 하나만 둔다.
+    #
+    # 한국어 특화 소형 모델(EXAONE·HyperCLOVAX·Kanana)은 **ko/en 전용이라 탈락**한다.
+    # 공개 언어가 ko·en·vi 이므로 다국어 폭이 있는 계열만 후보다.
+    # 확정은 골든셋 실측 후 ADR-004 — 지금 값은 1차 후보다.
+    local_model: str = "google/gemma-3-4b-it"
+    # 개발은 mps(M3 Pro), 배포는 cuda(AWS g5/g6). 자동 선택하되 강제할 수 있게 둔다 —
+    # 어느 장치로 돌았는지는 리포트에 남겨야 비교가 성립한다.
+    local_device: Literal["auto", "mps", "cuda", "cpu"] = "auto"
+    local_dtype: Literal["auto", "float16", "bfloat16", "float32"] = "auto"
+    # 생성 길이. API 경로의 llm_max_tokens 와 분리한다 — 로컬은 지연 특성이 달라
+    # 같은 값을 쓸 이유가 없다.
+    local_max_new_tokens: int = 1024
 
     # ── 임베딩 ───────────────────────────────────────────────────────
     # **모델명의 단일 출처.** 색인기(04_index)와 런타임이 같은 값을 봐야 한다.

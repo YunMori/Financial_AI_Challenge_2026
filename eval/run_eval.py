@@ -135,6 +135,25 @@ async def run_one(pipeline, row: dict) -> Outcome:
     return out
 
 
+def backend_info() -> dict:
+    """어느 백엔드·모델·장치로 잰 값인지.
+
+    ★ **로컬 모델 수치를 API 기준선과 같은 표에 섞으면 안 된다.** 다른
+    시스템을 잰 값이다. 리포트가 스스로 출처를 밝히지 않으면 나중에 파일명만
+    보고 비교하게 되고, 그 순간 튜닝 근거가 무너진다.
+    """
+    from app.config import get_settings
+
+    s = get_settings()
+    if s.llm_backend == "local":
+        from app.llm.local_client import resolve_device
+
+        return {"backend": "local", "model": s.local_model,
+                "device": resolve_device(s.local_device)}
+    return {"backend": "anthropic", "model": s.llm_model,
+            "effort": s.llm_effort, "thinking": s.llm_thinking}
+
+
 def build_pipeline(no_llm: bool):
     from app.config import get_settings
     from app.llm.base import NullLLMClient
@@ -143,9 +162,11 @@ def build_pipeline(no_llm: bool):
     from app.rag.retrieve import get_retriever
 
     s = get_settings()
-    if no_llm or not s.llm_enabled:
+    # 로컬 백엔드는 키가 필요 없다 — `llm_enabled` 로 막으면 안 된다.
+    if no_llm or (s.llm_backend == "anthropic" and not s.llm_enabled):
         if not no_llm:
             print("★ ANTHROPIC_API_KEY 가 없어 --no-llm 으로 진행합니다.\n"
+                  "  로컬 모델을 쓰려면 LLM_BACKEND=local 로 두세요.\n"
                   "  생성이 필요한 지표는 None 으로 남습니다 (0 이 아닙니다).\n")
         # 번역기도 붙이지 않는다 — `--no-llm` 은 외부 호출을 **한 번도** 하지
         # 않는다는 뜻이고, 질의 정규화(③)도 LLM 호출이다.
@@ -240,7 +261,10 @@ def main() -> int:
         return 1
 
     pipeline, no_llm = build_pipeline(args.no_llm)
-    print(f"채점 {len(rows)}문항 (mode={'no-llm' if no_llm else 'llm'})")
+    bi = backend_info()
+    print(f"채점 {len(rows)}문항 (mode={'no-llm' if no_llm else 'llm'}, "
+          f"backend={bi['backend']}, model={bi['model']}"
+          + (f", device={bi['device']}" if "device" in bi else "") + ")")
 
     async def run_all() -> list[Outcome]:
         results = []
@@ -283,6 +307,7 @@ def main() -> int:
         "run_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "git_rev": git_rev(),
         "mode": "no-llm" if no_llm else "llm",
+        "backend": backend_info(),
         "python": platform.python_version(),
         "filters": {"lang": args.lang, "category": args.category, "limit": args.limit},
         "usage": usage(outcomes),
