@@ -15,8 +15,50 @@
 
 from __future__ import annotations
 
+import re
+import unicodedata
 from dataclasses import dataclass, field
 from statistics import median
+
+# ── 출력 언어 판정 ────────────────────────────────────────────────────
+#
+# ★ 이 검사는 **원래 어디에도 없었다.** `postprocess.finalize()` 는 `lang` 을
+#   받지만 폴백 문구와 고지 삽입에만 쓴다. 즉 **베트남어 질문에 한국어로 답해도
+#   인용·숫자·금지표현 검사를 전부 통과한다.** Claude 는 지시를 따랐으니
+#   드러나지 않았을 뿐이고, 소형 모델의 전형적 실패가 바로 언어 이탈이다.
+#   `citations` 생략과 같은 부류다 — 모델의 선의에 기대던 자리.
+_HANGUL = re.compile(r"[가-힯ᄀ-ᇿ]")
+# 베트남어 고유자(완성형). 라틴 알파벳만으로는 en 과 구분되지 않는다.
+_VIET = re.compile(r"[ăâđêôơưĂÂĐÊÔƠƯ]")
+
+# ⚠ "한글이 없어야 한다"로 판정하면 **안 된다.** 시스템 프롬프트가 en·vi 답변에
+#   "필요하면 한국어 원어를 괄호로 병기"하도록 지시한다(`app/llm/prompts.py`).
+#   정상 답변에도 한글이 섞이므로 **비율**로 본다.
+_HANGUL_MAX_FOR_NON_KO = 0.30   # 병기 수준을 넘으면 한국어로 답한 것
+_HANGUL_MIN_FOR_KO = 0.20       # 한국어 답변이면 이보다는 한글이 많다
+
+
+def detect_answer_language(text: str, expected: str) -> bool | None:
+    """답변이 요청 언어로 쓰였는가. 판정 불가면 None.
+
+    스크립트 기반이다 — 모델을 더 쓰지 않는다. 채점기가 채점 대상과 같은
+    종류의 실패를 하면 지표를 믿을 수 없기 때문이다.
+    """
+    stripped = "".join(ch for ch in (text or "") if not ch.isspace())
+    if len(stripped) < 20:
+        return None  # 폴백 문구·빈 답변은 대상이 아니다
+
+    hangul_ratio = len(_HANGUL.findall(stripped)) / len(stripped)
+    # 결합 성조가 분해돼 있어도 잡히도록 NFC 로 맞춘다.
+    has_viet = bool(_VIET.search(unicodedata.normalize("NFC", text)))
+
+    if expected == "ko":
+        return hangul_ratio >= _HANGUL_MIN_FOR_KO
+    if expected == "vi":
+        return has_viet and hangul_ratio <= _HANGUL_MAX_FOR_NON_KO
+    if expected == "en":
+        return not has_viet and hangul_ratio <= _HANGUL_MAX_FOR_NON_KO
+    return None
 
 # 채점 대상 카테고리 구분.
 FALLBACK_EXPECTED = frozenset({"no_evidence", "tier_c_trap"})
@@ -130,8 +172,10 @@ def score(outcomes: list[Outcome]) -> dict:
     reason_total = sum(1 for o in traps if o.expected_fallback)
 
     # ── 사실 포함률 — gold_facts 가 답변에 등장하는 비율 (문항 단위 평균)
+    # ★ 대소문자를 구분하면 영어에서 문장 첫머리의 "Limit" 이 "limit" 과 다르게
+    #   잡혀 정상 답변이 미달로 집계된다. 한국어에는 영향이 없다.
     fact_rates = [
-        sum(1 for f in o.gold_facts if f in o.answer) / len(o.gold_facts)
+        sum(1 for f in o.gold_facts if f.lower() in o.answer.lower()) / len(o.gold_facts)
         for o in answered if o.gold_facts
     ]
 
@@ -142,6 +186,13 @@ def score(outcomes: list[Outcome]) -> dict:
 
     # ── 숫자 정확도 — 근거로 뒷받침되지 않은 수치가 없는 응답의 비율
     num_ok = sum(1 for o in answered if not o.unsupported_numbers)
+
+    # ── 출력 언어 일치 — **이게 무너지면 나머지 지표는 볼 필요가 없다**
+    #    다국어 서비스에서 요청 언어가 아닌 언어로 답하면, 인용이 맞고 숫자가
+    #    맞아도 이용자에게는 읽을 수 없는 답변이다.
+    lang_judged = [(o, detect_answer_language(o.answer, o.lang)) for o in answered]
+    lang_scored = [(o, v) for o, v in lang_judged if v is not None]
+    lang_ok = sum(1 for _, v in lang_scored if v)
 
     # ── 계층 일치율 — 폴백이 아닌 응답에 대해서만 본다
     #    (폴백은 항상 C 라 섞으면 함정 문항 때문에 값이 부풀려진다)
@@ -188,6 +239,12 @@ def score(outcomes: list[Outcome]) -> dict:
             "forbidden_hits": {
                 "value": len(forbidden), "target": 0, "lower_is_better": True,
                 "items": forbidden[:10], "note": "0이 아니면 무조건 실패",
+            },
+            "answer_language_match": {
+                "value": _pct(lang_ok, len(lang_scored)), "hit": lang_ok,
+                "of": len(lang_scored), "target": 95.0,
+                "note": "★ 요청 언어로 답했는가. 무너지면 다른 지표는 의미가 없다 "
+                        "(짧은 폴백 문구는 판정 대상에서 제외)",
             },
             "number_accuracy": {
                 "value": _pct(num_ok, len(answered)), "hit": num_ok, "of": len(answered),
