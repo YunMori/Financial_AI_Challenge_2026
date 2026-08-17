@@ -18,6 +18,12 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from statistics import median
 
+# ★ 출력 언어 판정은 **런타임과 같은 함수를 쓴다** (`app/util/language.py`).
+#   원래 이 파일에만 있었고 `postprocess.finalize()` 에는 없었다 — 즉 지표는
+#   언어 이탈을 세면서 제품은 그대로 내보내고 있었다. 함수를 런타임으로 옮기고
+#   여기서 임포트한다. 판정이 두 벌이면 언젠가 어긋난다.
+from app.util.language import detect_answer_language  # noqa: F401  (재수출)
+
 # 채점 대상 카테고리 구분.
 FALLBACK_EXPECTED = frozenset({"no_evidence", "tier_c_trap"})
 
@@ -130,8 +136,10 @@ def score(outcomes: list[Outcome]) -> dict:
     reason_total = sum(1 for o in traps if o.expected_fallback)
 
     # ── 사실 포함률 — gold_facts 가 답변에 등장하는 비율 (문항 단위 평균)
+    # ★ 대소문자를 구분하면 영어에서 문장 첫머리의 "Limit" 이 "limit" 과 다르게
+    #   잡혀 정상 답변이 미달로 집계된다. 한국어에는 영향이 없다.
     fact_rates = [
-        sum(1 for f in o.gold_facts if f in o.answer) / len(o.gold_facts)
+        sum(1 for f in o.gold_facts if f.lower() in o.answer.lower()) / len(o.gold_facts)
         for o in answered if o.gold_facts
     ]
 
@@ -142,6 +150,13 @@ def score(outcomes: list[Outcome]) -> dict:
 
     # ── 숫자 정확도 — 근거로 뒷받침되지 않은 수치가 없는 응답의 비율
     num_ok = sum(1 for o in answered if not o.unsupported_numbers)
+
+    # ── 출력 언어 일치 — **이게 무너지면 나머지 지표는 볼 필요가 없다**
+    #    다국어 서비스에서 요청 언어가 아닌 언어로 답하면, 인용이 맞고 숫자가
+    #    맞아도 이용자에게는 읽을 수 없는 답변이다.
+    lang_judged = [(o, detect_answer_language(o.answer, o.lang)) for o in answered]
+    lang_scored = [(o, v) for o, v in lang_judged if v is not None]
+    lang_ok = sum(1 for _, v in lang_scored if v)
 
     # ── 계층 일치율 — 폴백이 아닌 응답에 대해서만 본다
     #    (폴백은 항상 C 라 섞으면 함정 문항 때문에 값이 부풀려진다)
@@ -188,6 +203,12 @@ def score(outcomes: list[Outcome]) -> dict:
             "forbidden_hits": {
                 "value": len(forbidden), "target": 0, "lower_is_better": True,
                 "items": forbidden[:10], "note": "0이 아니면 무조건 실패",
+            },
+            "answer_language_match": {
+                "value": _pct(lang_ok, len(lang_scored)), "hit": lang_ok,
+                "of": len(lang_scored), "target": 95.0,
+                "note": "★ 요청 언어로 답했는가. 무너지면 다른 지표는 의미가 없다 "
+                        "(짧은 폴백 문구는 판정 대상에서 제외)",
             },
             "number_accuracy": {
                 "value": _pct(num_ok, len(answered)), "hit": num_ok, "of": len(answered),
