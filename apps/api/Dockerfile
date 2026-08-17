@@ -51,7 +51,7 @@ COPY corpus/glossary/ ./corpus/glossary/
 
 COPY apps/api/app/ ./app/
 
-# Render 는 PORT 환경변수를 주입한다. 없으면 10000.
+# 배포 환경이 PORT 를 주입하면 그것을 쓴다. 없으면 10000.
 ENV PORT=10000
 EXPOSE 10000
 CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT}"]
