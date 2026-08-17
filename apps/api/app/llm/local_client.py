@@ -211,9 +211,18 @@ class LocalLLMClient:
         log.info("로컬 모델 로드: %s (device=%s dtype=%s)", self.model_name, self.device, dtype)
 
         self._tokenizer = AutoTokenizer.from_pretrained(self.model_name)
+        # ★ `.to(device)` 로 옮기면 **최대 메모리가 두 배가 된다.** from_pretrained 가
+        #   먼저 CPU 에 전체를 올리고, `.to()` 가 대상 장치에 **복사본**을 만드는
+        #   동안 둘이 함께 존재한다. 8B fp16(15.9GB)에서 순간 ~32GB 가 필요해
+        #   18GB 장비가 OOM 으로 죽었다 — 가중치 로드는 63초에 끝나 있었고, 바로
+        #   그 다음이었다(실측 2026-08-17, sail/Sailor2-8B-Chat).
+        #
+        #   `device_map` 을 주면 accelerate 가 샤드 단위로 **대상 장치에 바로** 올려
+        #   전체 CPU 사본을 만들지 않는다. 최대 메모리가 가중치 크기 수준으로 내려간다.
+        #   AWS 에서도 같은 이득이다 — 24GB GPU 에 9B 를 올릴 때 여유가 달라진다.
         self._model = AutoModelForCausalLM.from_pretrained(
-            self.model_name, dtype=dtype,
-        ).to(self.device)
+            self.model_name, dtype=dtype, device_map=self.device,
+        )
         self._model.eval()
         torch.set_grad_enabled(False)
         log.info("로컬 모델 로드 완료 — %.1f초", time.perf_counter() - started)

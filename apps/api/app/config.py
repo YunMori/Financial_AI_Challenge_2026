@@ -77,8 +77,22 @@ class Settings(BaseSettings):
     #
     # 한국어 특화 소형 모델(EXAONE·HyperCLOVAX·Kanana)은 **ko/en 전용이라 탈락**한다.
     # 공개 언어가 ko·en·vi 이므로 다국어 폭이 있는 계열만 후보다.
-    # 확정은 골든셋 실측 후 ADR-004 — 지금 값은 1차 후보다.
-    local_model: str = "google/gemma-3-4b-it"
+    #
+    # ★ 기본값이 `google/gemma-3-4b-it` 이었는데, **그 모델은 gated repo 라 401 로
+    #   막혀 ADR-004 의 측정에서 이미 제외된 값**이었다. 즉 `LLM_BACKEND=local` 로
+    #   켜면 가중치를 받다가 죽는 상태로 남아 있었다.
+    #
+    # 1차 측정 세트 (2026-08-17 배선 검증 완료, 전부 non-gated):
+    #   Qwen/Qwen3.5-4B                     ~10GB  계열 연속성 (Qwen3-4B 실측이 대조군)
+    #   google/gemma-4-e4b-it               ~16GB  MatFormer 효율 · 140+ 언어 사전학습
+    #   sail/Sailor2-8B-Chat                ~17GB  SEA 특화 SFT (vi 포함 15개 언어)
+    # 2차 조건부:
+    #   aisingapore/Qwen-SEA-LION-v4-4B-VL  ~8GB   Sailor2 가 이겼을 때만 (VL 주의)
+    #   Qwen/Qwen3.5-9B                     ~19GB  1차 전원 미달 시 승격
+    #
+    # 확정은 AWS GPU 실측 후 ADR-004. 지금 값은 **MPS 에 올릴 수 있는 유일한 후보**다
+    # (M3 Pro 18GB 에서 나머지는 메모리가 모자란다).
+    local_model: str = "Qwen/Qwen3.5-4B"
     # 개발은 mps(M3 Pro), 배포는 cuda(AWS g5/g6). 자동 선택하되 강제할 수 있게 둔다 —
     # 어느 장치로 돌았는지는 리포트에 남겨야 비교가 성립한다.
     local_device: Literal["auto", "mps", "cuda", "cpu"] = "auto"
