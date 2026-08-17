@@ -31,6 +31,7 @@ Anthropic API 가 해외 리전이기 때문이다. 생성을 로컬 모델로 �
 from __future__ import annotations
 
 import logging
+import re
 import time
 from typing import Any, AsyncIterator
 
@@ -150,28 +151,75 @@ def _require_all_fields(schema: dict) -> dict:
     return walk(schema)
 
 
+_THINK_BLOCK = re.compile(r"<think>.*?</think>", re.S | re.I)
+_THINK_OPEN = re.compile(r"^.*?</think>", re.S | re.I)
+# 추론형 모델이 답 앞에 붙이는 서두. 이 줄로 시작하면 **그 줄은 검색어가 아니다.**
+#
+# ⚠ **한국어 쪽에 `\b` 를 쓰지 않는다.** `알겠` 뒤에 `습니다` 가 붙으면 단어 경계가
+#   성립하지 않아 매칭이 통째로 빗나간다. 이 프로젝트에서 같은 원인의 버그를
+#   네 번째로 만났다 — 토크나이저의 체류자격 정규식, 숫자 정규화,
+#   `input_filter.py` 의 PII 패턴에 이어서다.
+_REASONING_LEAD = re.compile(
+    r"^\s*(?:(?:thinking process|analysis|let me|first,|okay|sure|알겠|먼저|분석|"
+    r"네,|다음은)|(?:step|단계)\s*\d)", re.I)
+_HANGUL = re.compile(r"[가-힯]")
+
+
 def _clean_search_terms(raw: str) -> str:
-    """모델 출력에서 검색어만 남긴다.
+    """모델 출력에서 한국어 검색어만 남긴다.
 
     "설명 없이 검색어만 출력하세요"라고 지시해도 소형 모델은 서두("검색어:")를
     붙이거나 따옴표로 감싸거나 여러 줄로 답한다. 그대로 BM25 에 넘기면 기호와
     조사가 토큰이 되어 검색어가 오염된다.
 
-    **첫 줄만 취한다.** 여러 줄이 오면 뒤쪽은 대개 설명이다.
+    ★ **첫 줄만 취하면 추론형 모델에서 무너진다.** Qwen3.5-4B 는 답 앞에 추론을
+      쓴다(실측 2026-08-17):
+
+          'Thinking Process:\\n\\n1.  **Analyze the Request:** ...'
+
+      첫 줄을 취하면 검색어가 `Thinking Process:` 가 되고, vi Recall@5 가
+      95.2%(haiku) → **14.3%** 로 무너졌다. 스크리닝을 돌리지 않았으면 AWS 에서
+      후보의 품질 문제로 오독했을 사고다.
+
+    그래서 **줄을 거른 뒤 첫 줄을 취한다** — 순서 규칙은 그대로 두고, 검색어가
+    아닌 줄을 먼저 버린다. 두 실패를 동시에 만족해야 하기 때문이다:
+
+        추론형(Qwen3.5)  서두가 앞, 답이 뒤   → 서두를 버려야 한다
+        지시형(Qwen3-4B) 답이 앞, 설명이 뒤   → 첫 줄을 취해야 한다  (ADR-004)
+
+    가르는 신호는 **한글**이다. 추론 서두는 영어이고 정규화의 산출물은 정의상
+    한국어 검색어이므로, 한글이 있는 줄만 남기면 두 경우가 함께 풀린다.
+    (한국어 서두는 `_REASONING_LEAD` 가 따로 거른다.)
     """
     text = (raw or "").strip()
-    for line in text.splitlines():
-        line = line.strip()
-        if line:
-            text = line
-            break
-    else:
+    # 1. <think>…</think> 를 걷어낸다. 닫히지 않았으면 여는 태그 이후를 버린다.
+    text = _THINK_BLOCK.sub(" ", text)
+    if "</think>" in text.lower():
+        text = _THINK_OPEN.sub("", text)
+
+    lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
+    if not lines:
         return ""
 
-    for p in _PREFIXES:
-        if text.lower().startswith(p.lower()):
-            text = text[len(p):].strip()
-    return text.strip().strip('"“”\'`').strip()
+    def _strip(line: str) -> str:
+        for p in _PREFIXES:
+            if line.lower().startswith(p.lower()):
+                line = line[len(p):].strip()
+        return line.strip().strip('"“”\'`').strip()
+
+    # 2. 추론 서두를 버리고, 한글이 있는 줄 중 **첫 줄**을 취한다.
+    usable = [ln for ln in lines if not _REASONING_LEAD.match(ln)]
+    hangul = [ln for ln in usable if _HANGUL.search(ln)]
+    if hangul:
+        return _strip(hangul[0])
+
+    # 3. 한글이 하나도 없으면 **정규화가 실패한 것이다.** 빈 문자열을 준다 —
+    #    호출부(`normalize.py`)가 사전 히트로 폴백하므로, 추론 조각을 검색어로
+    #    넘기는 것보다 훨씬 낫다. 넘기면 그 조각이 BM25 를 오염시킨다.
+    if usable and not any(_HANGUL.search(ln) for ln in lines):
+        log.warning("정규화 출력에 한글이 없습니다 — 사전 히트로 폴백합니다: %r",
+                    usable[0][:60])
+    return ""
 
 
 class LocalLLMClient:
@@ -336,6 +384,24 @@ class LocalLLMClient:
             ),
         )
 
+    def _apply_template(self, messages: list[dict]):
+        """chat template 을 적용한다. **추론 모드는 끈다.**
+
+        ★ Qwen3.5 계열은 기본적으로 답 앞에 추론을 쓴다. 정규화(③)에서는 그게
+          그대로 검색어가 되어 Recall 을 무너뜨렸고(14.3%), 생성(⑦)에서는
+          `max_new_tokens` 를 추론이 먹어 JSON 이 잘린다 — 둘 다 조용한 실패다.
+
+        `enable_thinking` 은 템플릿마다 있을 수도 없을 수도 있다. 지원하지 않는
+        모델에서 `TypeError` 가 나므로 **한 번 시도하고 조용히 물러난다.**
+        """
+        kw = dict(add_generation_prompt=True, return_tensors="pt", return_dict=True)
+        try:
+            enc = self._tokenizer.apply_chat_template(
+                messages, enable_thinking=False, **kw)
+        except (TypeError, ValueError, KeyError):
+            enc = self._tokenizer.apply_chat_template(messages, **kw)
+        return enc.to(self.device)
+
     def _generate_stream(self, system: str, user: str):
         """문법 제약 스트리밍 생성 (동기 제너레이터)."""
         from transformers import TextIteratorStreamer
@@ -346,10 +412,7 @@ class LocalLLMClient:
             {"role": "system", "content": system},
             {"role": "user", "content": user},
         ]
-        enc = self._tokenizer.apply_chat_template(
-            messages, add_generation_prompt=True, return_tensors="pt",
-            return_dict=True,
-        ).to(self.device)
+        enc = self._apply_template(messages)
 
         text_streamer = TextIteratorStreamer(
             self._tokenizer, skip_prompt=True, skip_special_tokens=True,
@@ -403,10 +466,7 @@ class LocalLLMClient:
         # `return_dict=True` 로 받아 **attention_mask 를 함께 넘긴다.** 빼면
         # pad 와 eos 가 같은 토큰이라 모델이 마스크를 추론하지 못하고,
         # transformers 가 "unexpected behavior" 를 경고한다.
-        enc = self._tokenizer.apply_chat_template(
-            messages, add_generation_prompt=True, return_tensors="pt",
-            return_dict=True,
-        ).to(self.device)
+        enc = self._apply_template(messages)
 
         out = self._model.generate(
             **enc,
