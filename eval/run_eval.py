@@ -24,6 +24,7 @@ import json
 import platform
 import subprocess
 import sys
+from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -226,6 +227,8 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--out", type=Path, help="리포트 JSON 경로")
+    ap.add_argument("--partial", type=Path,
+                    help="문항마다 결과를 JSONL 로 붙여 쓴다 (긴 실행의 중간 저장)")
     ap.add_argument("--no-llm", action="store_true", help="검색·판정만 (키 불필요)")
     ap.add_argument("--validate-only", action="store_true", help="스키마만 검사")
     ap.add_argument("--lang", choices=sorted(VALID_LANGS), help="해당 언어만")
@@ -266,15 +269,33 @@ def main() -> int:
           f"backend={bi['backend']}, model={bi['model']}"
           + (f", device={bi['device']}" if "device" in bi else "") + ")")
 
+    # ★ 중간 저장. 채점 루프는 **전부 끝난 뒤에만** 리포트를 쓴다. 로컬 모델은
+    #   문항당 수십 초라 2시간짜리 실행이 되는데, 중간에 죽으면 전부 잃는다 —
+    #   실제로 `exp_006` 은 채점을 다 끝내고 **파일 쓰기 직전에** 죽어 두 번
+    #   날렸다. 옵션이 없으면 동작은 이전과 같다.
+    partial_fp = None
+    if args.partial:
+        args.partial.parent.mkdir(parents=True, exist_ok=True)
+        partial_fp = args.partial.open("w", encoding="utf-8")
+        print(f"중간 저장 → {args.partial}")
+
     async def run_all() -> list[Outcome]:
         results = []
         for i, row in enumerate(rows, 1):
-            results.append(await run_one(pipeline, row))
+            outcome = await run_one(pipeline, row)
+            results.append(outcome)
+            if partial_fp:
+                partial_fp.write(json.dumps(asdict(outcome), ensure_ascii=False) + "\n")
+                partial_fp.flush()  # 죽어도 남아 있어야 의미가 있다
             if i % 20 == 0 or i == len(rows):
-                print(f"  {i}/{len(rows)}")
+                print(f"  {i}/{len(rows)}", flush=True)
         return results
 
-    outcomes = asyncio.run(run_all())
+    try:
+        outcomes = asyncio.run(run_all())
+    finally:
+        if partial_fp:
+            partial_fp.close()
 
     reached_generation = 0
     if no_llm:
@@ -362,12 +383,29 @@ def main() -> int:
           f"우회 표현 {tb['regex_evades']['value']}% "
           f"({tb['regex_evades']['hit']}/{tb['regex_evades']['of']})")
 
-    print("\n언어별 폴백 정확도 / 과잉 폴백률")
+    # ★ **언어별로 본다.** 총계는 특정 언어만 망가진 상태를 감춘다
+    #   (`metrics.by_group` 주석 참조). 다국어 서비스에서 주 이용자는
+    #   비한국어 화자이므로, ko 77문항에 묻힌 vi 실패를 놓치면 안 된다.
+    print("\n언어별 (★ 총계보다 이쪽을 먼저 본다)")
+    cols = [("언어일치", "answer_language_match", 95.0),
+            ("인용", "citation_rate", 100.0),
+            ("숫자", "number_accuracy", 98.0),
+            ("사실포함", "fact_coverage", 85.0),
+            ("폴백정확", "fallback_accuracy", 95.0),
+            ("과잉폴백", "over_fallback_rate", 8.0)]
+    print("  " + "".join(f"{'':>4}" for _ in range(0)) + "lang " +
+          "".join(f"{name:>10}" for name, _, _ in cols))
     for lang, rep in report["by_lang"].items():
-        fa = rep["metrics"]["fallback_accuracy"]["value"]
-        of = rep["metrics"]["over_fallback_rate"]["value"]
-        print(f"  {lang}  {('—' if fa is None else f'{fa:g}%'):>6}  /  "
-              f"{('—' if of is None else f'{of:g}%'):>6}")
+        cells = []
+        for _, key, target in cols:
+            v = rep["metrics"].get(key, {}).get("value")
+            if v is None:
+                cells.append(f"{'—':>10}")
+                continue
+            lower_better = key == "over_fallback_rate"
+            miss = v > target if lower_better else v < target
+            cells.append(f"{f'{v:g}%' + ('★' if miss else ''):>10}")
+        print(f"  {lang:5}" + "".join(cells))
 
     if report["failures"]:
         print(f"\n어긋난 문항 {len(report['failures'])}건 (앞 10건):")
