@@ -93,7 +93,7 @@ def corpus_doc_ids() -> set[str] | None:
 
 
 async def run_one(pipeline, row: dict) -> Outcome:
-    from app.schemas.chat import ChatRequest
+    from app.schemas.chat import ChatRequest, SessionContext
 
     out = Outcome(
         qid=row["qid"], lang=row["lang"], category=row["category"],
@@ -104,7 +104,15 @@ async def run_one(pipeline, row: dict) -> Outcome:
     try:
         import time
 
-        req = ChatRequest(message=row["question"], lang=row["lang"], visa=row.get("visa"))
+        # ★ 비자는 `context.visa` 에 담아야 한다. `ChatRequest(visa=…)` 로 넘기면
+        #   그런 필드가 없어 **Pydantic 이 조용히 버린다** — 에러가 나지 않으므로
+        #   골든셋 160문항이 전부 `visa` 를 갖고 있는데도 ④ 의 비자 메타 필터와
+        #   ③ 의 검색어 비자 결합이 채점에서 한 번도 동작하지 않았다.
+        #   E-9/E-7 변별이 이 서비스가 BM25 를 쓰는 이유인데 그 경로가 미측정이었다.
+        req = ChatRequest(
+            message=row["question"], lang=row["lang"],
+            context=SessionContext(visa=row.get("visa")),
+        )
         started = time.perf_counter()
         async for ev in pipeline.run(req):
             if ev.kind == "token" and out.ttft_ms is None:
@@ -229,6 +237,8 @@ def main() -> int:
     ap.add_argument("--out", type=Path, help="리포트 JSON 경로")
     ap.add_argument("--partial", type=Path,
                     help="문항마다 결과를 JSONL 로 붙여 쓴다 (긴 실행의 중간 저장)")
+    ap.add_argument("--resume", type=Path,
+                    help="이전 --partial 을 이어받아 남은 문항만 채점한다")
     ap.add_argument("--no-llm", action="store_true", help="검색·판정만 (키 불필요)")
     ap.add_argument("--validate-only", action="store_true", help="스키마만 검사")
     ap.add_argument("--lang", choices=sorted(VALID_LANGS), help="해당 언어만")
@@ -263,6 +273,22 @@ def main() -> int:
         print("조건에 맞는 문항이 없습니다.")
         return 1
 
+    # ★ 이어받기. 로컬 채점은 두 시간이 넘어 중간에 끊기는 일이 실제로 생긴다
+    #   (타임아웃·크래시·수동 중단). 이미 채점한 문항을 다시 돌리는 것은 순수한
+    #   낭비이므로, `--partial` 로 남긴 결과를 읽어 **남은 문항만** 채점한다.
+    resumed: list[Outcome] = []
+    if args.resume and args.resume.exists():
+        for line in args.resume.read_text(encoding="utf-8").splitlines():
+            if line.strip():
+                resumed.append(Outcome(**json.loads(line)))
+        done = {o.qid for o in resumed}
+        before = len(rows)
+        rows = [r for r in rows if r["qid"] not in done]
+        print(f"이어받기: {len(done)}문항 완료 · 남은 {len(rows)} / 전체 {before}")
+        if not rows:
+            print("남은 문항이 없습니다 — 이어받은 결과로 리포트만 만듭니다.")
+
+
     pipeline, no_llm = build_pipeline(args.no_llm)
     bi = backend_info()
     print(f"채점 {len(rows)}문항 (mode={'no-llm' if no_llm else 'llm'}, "
@@ -296,6 +322,12 @@ def main() -> int:
     finally:
         if partial_fp:
             partial_fp.close()
+
+    # 이어받은 결과를 앞에 붙인다. 채점식은 순서에 의존하지 않지만,
+    # 골든셋 순서를 유지해야 리포트를 나란히 놓고 읽을 수 있다.
+    if resumed:
+        order = {r["qid"]: i for i, r in enumerate(load_golden())}
+        outcomes = sorted(resumed + outcomes, key=lambda o: order.get(o.qid, 1 << 30))
 
     reached_generation = 0
     if no_llm:
