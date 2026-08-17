@@ -74,6 +74,11 @@ def main() -> int:
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--model", required=True, help="HF 리포 ID")
     ap.add_argument("--device", default="auto", choices=["auto", "mps", "cuda", "cpu"])
+    # 배선 검증은 **품질 측정이 아니다.** Gemma 계열은 bf16 학습이라 MPS 기본값인
+    # fp16 으로 재면 품질에 dtype 아티팩트가 섞이는데, "로드되는가 · 문법이 먹는가"
+    # 만 볼 때는 dtype 을 명시해 그 변수를 아예 뺄 수 있다.
+    ap.add_argument("--dtype", default="auto",
+                    choices=["auto", "float16", "bfloat16", "float32"])
     ap.add_argument("--dry-run", action="store_true",
                     help="가중치를 받지 않고 리포 메타데이터·설정만 본다")
     ap.add_argument("--max-new-tokens", type=int, default=256,
@@ -144,11 +149,14 @@ def main() -> int:
     # ── 4. 가중치 로드 ───────────────────────────────────────────────
     def load():
         from app.llm.local_client import LocalLLMClient
-        c = LocalLLMClient(model_name=args.model, device=args.device)
+        c = LocalLLMClient(model_name=args.model, device=args.device, dtype=args.dtype)
         t0 = time.perf_counter()
         c._load()  # noqa: SLF001 — 배선 검증이 목적이다
         state["client"] = c
-        return f"device={c.device} · {time.perf_counter() - t0:.0f}초"
+        from app.llm.local_client import resolve_dtype
+        dt = resolve_dtype(c.device, args.dtype)
+        return f"device={c.device} · dtype={str(dt).replace('torch.', '')} · " \
+               f"{time.perf_counter() - t0:.0f}초"
 
     if not check("가중치 로드 (AutoModelForCausalLM)", load):
         print(f"\n  {WARN}VL·MoE 계열은 다른 모델 클래스가 필요하다 — "
