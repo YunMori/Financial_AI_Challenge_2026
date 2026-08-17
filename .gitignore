@@ -35,3 +35,8 @@ out/
 .idea/
 .vscode/
 *.swp
+
+# 리포트 그림은 커밋하지 않는다 — 커밋된 리포트 JSON 과 eval/report_charts.py 로
+# 언제든 재생성된다. HTML 은 plotly 를 인라인해 4MB 가 넘는다.
+#   python eval/report_charts.py --history
+eval/reports/charts/
