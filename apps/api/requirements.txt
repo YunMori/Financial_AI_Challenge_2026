@@ -35,7 +35,10 @@ weasyprint~=63.0
 # 양쪽을 돌린다. vLLM 은 처리량이 좋지만 MPS 를 지원하지 않아 개발과 배포가
 # 갈라지므로 쓰지 않는다(단일 사용자 데모라 처리량이 병목이 아니다).
 torch~=2.13
-transformers~=4.57
+# ★ 5.x 가 **필요하다.** 4.57 은 `qwen3_5`·`gemma4` 아키텍처를 모른다
+#   ("Transformers does not recognize this architecture"). 후보 3종 중 2종이
+#   그 계열이라 4.x 로는 재 볼 수조차 없다 (실측 2026-08-17).
+transformers~=5.15
 accelerate~=1.14
 # 구조화 출력 강제. 문법 제약이 없으면 citations·numbers_used 가 깨지고
 # 인용 검사·숫자 대조가 통째로 무력해진다 — 이 백엔드의 성패가 여기 걸린다.
@@ -45,6 +48,12 @@ xgrammar~=0.2
 #   (`tokenizers<=0.20.3`)과 충돌한다는 pip 경고가 뜬다. **실동작은 정상**이다 —
 #   검색 회귀(Recall@5 93.9% / 과잉폴백 6.1%)가 설치 전후로 동일했다.
 #   chromadb 쪽 선언이 보수적인 것이므로 버전을 내리지 않는다.
+#
+# ⚠ xgrammar 0.2.4 도 `transformers<5` 를 선언해 같은 경고가 뜬다. 같은 판단을
+#   적용하되 **더 조심해서 본다** — 문법 제약은 이 백엔드의 성패가 걸린 지점이라
+#   "임포트가 되니까 괜찮다"로 끝낼 수 없다. 현재 확인된 것은 임포트와
+#   `xgrammar.contrib.hf.LogitsProcessor` 로딩까지이고, **실제 문법 제약 생성은
+#   가중치를 받아 `scripts/verify_local_model.py` 로 확인해야 한다.**
 
 # ── 리포트 그림 (eval/report_charts.py) ──────────────────────────────
 # 리포트 JSON 은 튜닝의 정량 증거이지만 사람이 읽는 형태가 아니다. planner §13 이
