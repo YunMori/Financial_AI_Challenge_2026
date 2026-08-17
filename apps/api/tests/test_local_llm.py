@@ -210,3 +210,46 @@ class TestGrammarRequiresAllFields:
 
         _require_all_fields(LLMAnswer.model_json_schema())
         assert LLMAnswer(answer="a", tier="A").citations == []
+
+
+class TestVocabSizeResolution:
+    """XGrammar 에 넘길 어휘 크기.
+
+    ★ 틀린 값을 넘겨도 **에러가 나지 않는다.** 마스크가 로짓과 어긋난 채로 돌아
+    문법 제약이 조용히 꺼지고, `citations`·`numbers_used` 가 깨져 인용 검사와
+    숫자 대조가 통째로 무력해진다 — ADR-004 ① 과 같은 형태의 사고다.
+    """
+
+    class _Cfg:
+        def __init__(self, **kw):
+            self.__dict__.update(kw)
+
+    def test_top_level_wins(self):
+        """옛 방식(Qwen2 계열). 실측: sail/Sailor2-8B-Chat = 151,936"""
+        from app.llm.local_client import resolve_vocab_size
+        cfg = self._Cfg(vocab_size=151936)
+        assert resolve_vocab_size(cfg, ["x"] * 9) == 151936
+
+    def test_falls_back_to_text_config(self):
+        """transformers 5 의 신형 스키마. 실측(2026-08-17):
+        Qwen3.5-4B 248,320 · Gemma-4-E4B-it 262,144 · SEA-LION-4B-VL 151,936.
+        **VL 만의 특성이 아니다** — 신형 config 스키마 전반이다."""
+        from app.llm.local_client import resolve_vocab_size
+        cfg = self._Cfg(text_config=self._Cfg(vocab_size=248320))
+        assert resolve_vocab_size(cfg, ["x"] * 9) == 248320
+
+    def test_top_level_none_still_falls_through(self):
+        """속성이 있는데 값이 None 인 경우도 있다 — 있고/없고가 아니라 값으로 판단한다."""
+        from app.llm.local_client import resolve_vocab_size
+        cfg = self._Cfg(vocab_size=None, text_config=self._Cfg(vocab_size=262144))
+        assert resolve_vocab_size(cfg, ["x"] * 9) == 262144
+
+    def test_last_resort_is_tokenizer_length(self):
+        """토크나이저 길이는 패딩 때문에 로짓 차원과 다를 수 있어 최후의 수단이다."""
+        from app.llm.local_client import resolve_vocab_size
+        assert resolve_vocab_size(self._Cfg(), ["x"] * 7) == 7
+
+    def test_zero_is_not_a_valid_size(self):
+        from app.llm.local_client import resolve_vocab_size
+        cfg = self._Cfg(vocab_size=0, text_config=self._Cfg(vocab_size=151936))
+        assert resolve_vocab_size(cfg, ["x"] * 9) == 151936

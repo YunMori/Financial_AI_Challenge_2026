@@ -89,6 +89,37 @@ def resolve_dtype(device: str, preference: str = "auto") -> Any:
     return torch.float32
 
 
+def resolve_vocab_size(config, tokenizer) -> int:
+    """XGrammar 에 넘길 어휘 크기를 찾는다.
+
+    ★ **`config.vocab_size` 만 읽으면 안 된다.** transformers 5 부터 신형 아키텍처는
+    텍스트 설정을 `config.text_config` 로 한 겹 감싼다. 실측(2026-08-17):
+
+        Qwen/Qwen3.5-4B                 text_config.vocab_size = 248,320
+        google/gemma-4-e4b-it           text_config.vocab_size = 262,144
+        aisingapore/…-4B-VL             text_config.vocab_size = 151,936
+        sail/Sailor2-8B-Chat (Qwen2)    vocab_size            = 151,936  ← 옛 방식
+
+    처음에는 VL 계열의 특성으로 봤지만 그렇지 않다 — **신형 config 스키마 전반**이다.
+    틀린 값을 넘기면 `TokenizerInfo` 의 마스크가 로짓과 어긋나는데 **에러가 나지
+    않는다.** 문법 제약이 조용히 꺼지고, 그러면 `citations`·`numbers_used` 가 깨져
+    인용 검사와 숫자 대조가 통째로 무력해진다 — ADR-004 ① 과 같은 형태의 사고다.
+
+    어휘 크기는 **모델의 로짓 차원**이어야 한다(마스크가 로짓 위에서 돈다).
+    토크나이저 길이는 패딩 때문에 다를 수 있으므로 최후의 수단으로만 쓴다.
+    """
+    for holder, attr in ((config, "vocab_size"),
+                         (getattr(config, "text_config", None), "vocab_size")):
+        size = getattr(holder, attr, None) if holder is not None else None
+        if isinstance(size, int) and size > 0:
+            return size
+    size = len(tokenizer)
+    log.warning("config 에서 vocab_size 를 찾지 못해 토크나이저 길이(%d)를 씁니다. "
+                "패딩 때문에 로짓 차원과 다를 수 있습니다 — 문법 제약이 어긋나면 "
+                "이 값을 먼저 의심하세요.", size)
+    return size
+
+
 def _require_all_fields(schema: dict) -> dict:
     """모든 object 의 속성을 `required` 로 만든다 — **문법에서만.**
 
@@ -195,7 +226,8 @@ class LocalLLMClient:
 
             self._load()
             info = xgr.TokenizerInfo.from_huggingface(
-                self._tokenizer, vocab_size=self._model.config.vocab_size,
+                self._tokenizer,
+                vocab_size=resolve_vocab_size(self._model.config, self._tokenizer),
             )
             self._compiler = xgr.GrammarCompiler(info)
         return self._compiler
@@ -372,4 +404,5 @@ def build_local_client() -> LocalLLMClient:
     return LocalLLMClient()
 
 
-__all__ = ["LocalLLMClient", "build_local_client", "resolve_device", "resolve_dtype"]
+__all__ = ["LocalLLMClient", "build_local_client", "resolve_device", "resolve_dtype",
+           "resolve_vocab_size"]
