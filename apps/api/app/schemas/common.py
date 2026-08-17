@@ -71,6 +71,10 @@ class FallbackReason(StrEnum):
     FORBIDDEN_EXPRESSION = "forbidden_expression"  # "보장", "반드시 승인" 등
     CREDENTIAL_REQUEST = "credential_request"  # 답변이 계좌·비밀번호를 요구 (사칭 대응)
     OUT_OF_SCOPE = "out_of_scope"  # 모델이 스스로 범위 밖이라 신고
+    # 요청 언어가 아닌 언어로 답함. 다국어 서비스에서 이건 인용이 맞고 숫자가 맞아도
+    # 이용자에게는 **읽을 수 없는 답변**이다. 소형 모델의 전형적 실패라 로컬 백엔드
+    # 전환(ADR-004)과 함께 들어왔다.
+    LANGUAGE_MISMATCH = "language_mismatch"
 
     # ── 외부 요인 ────────────────────────────────────────────────────
     MODEL_REFUSAL = "model_refusal"  # 안전 분류기 거절 (stop_reason=refusal)

@@ -1,9 +1,13 @@
-"""출력 언어 일치 판정.
+"""출력 언어 일치 판정 (채점기 쪽).
 
-★ 이 검사는 원래 어디에도 없었다. `postprocess.finalize()` 는 `lang` 을 받지만
-폴백 문구와 고지 삽입에만 쓴다 — **베트남어 질문에 한국어로 답해도 인용·숫자·
-금지표현 검사를 전부 통과한다.** Claude 가 지시를 따랐으니 드러나지 않았을
-뿐이고, 소형 모델의 전형적 실패가 바로 언어 이탈이다.
+★ 이 검사는 한동안 **채점기에만** 있었다. `postprocess.finalize()` 는 `lang` 을
+받지만 폴백 문구와 고지 삽입에만 썼고 — **베트남어 질문에 한국어로 답해도
+인용·숫자·금지표현 검사를 전부 통과했다.** Claude 가 지시를 따랐으니 드러나지
+않았을 뿐이고, 소형 모델의 전형적 실패가 바로 언어 이탈이다.
+
+지금은 판정 함수가 `app/util/language.py` 로 옮겨져 런타임(⑧ 출력 가드레일)과
+채점기가 **같은 함수**를 쓴다. 런타임 쪽 차단 테스트는
+`apps/api/tests/test_tiering.py` 에 있다. 이 파일은 판정식 자체를 고정한다.
 """
 
 from __future__ import annotations
@@ -13,6 +17,10 @@ from pathlib import Path
 
 import pytest
 
+REPO_ROOT = Path(__file__).resolve().parents[2]
+# `metrics` 가 런타임의 판정 함수를 임포트하므로 앱 경로도 필요하다
+# (`run_eval.py` 가 하는 것과 같은 배선).
+sys.path.insert(0, str(REPO_ROOT / "apps" / "api"))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from metrics import detect_answer_language  # noqa: E402
