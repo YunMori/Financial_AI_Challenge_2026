@@ -211,18 +211,28 @@ class LocalLLMClient:
         log.info("로컬 모델 로드: %s (device=%s dtype=%s)", self.model_name, self.device, dtype)
 
         self._tokenizer = AutoTokenizer.from_pretrained(self.model_name)
-        # ★ `.to(device)` 로 옮기면 **최대 메모리가 두 배가 된다.** from_pretrained 가
-        #   먼저 CPU 에 전체를 올리고, `.to()` 가 대상 장치에 **복사본**을 만드는
-        #   동안 둘이 함께 존재한다. 8B fp16(15.9GB)에서 순간 ~32GB 가 필요해
-        #   18GB 장비가 OOM 으로 죽었다 — 가중치 로드는 63초에 끝나 있었고, 바로
-        #   그 다음이었다(실측 2026-08-17, sail/Sailor2-8B-Chat).
+        # ★ 로드 경로가 **장치마다 다르다.** 둘 다 실측으로 정해진 값이다
+        #   (2026-08-17, M3 Pro 18GB).
         #
-        #   `device_map` 을 주면 accelerate 가 샤드 단위로 **대상 장치에 바로** 올려
-        #   전체 CPU 사본을 만들지 않는다. 최대 메모리가 가중치 크기 수준으로 내려간다.
-        #   AWS 에서도 같은 이득이다 — 24GB GPU 에 9B 를 올릴 때 여유가 달라진다.
-        self._model = AutoModelForCausalLM.from_pretrained(
-            self.model_name, dtype=dtype, device_map=self.device,
-        )
+        #   `.to(device)` 는 최대 메모리를 **두 배로** 만든다. from_pretrained 가
+        #   먼저 CPU 에 전체를 올리고, `.to()` 가 대상 장치에 복사본을 만드는 동안
+        #   둘이 함께 존재한다. 8B fp16(15.9GB)에서 순간 ~32GB 가 필요해 OOM 으로
+        #   죽었다 — 가중치 로드는 63초에 성공해 있었고 바로 그 다음이었다.
+        #
+        #   `device_map` 은 accelerate 가 샤드 단위로 대상 장치에 바로 올려 그
+        #   두 배를 없앤다. **그런데 MPS 에서는 세그폴트(SIGSEGV)가 난다** — 로드
+        #   도중 조용히 죽고 파이썬 예외가 없어 원인을 찾기 어렵다. 4B 로도 재현된다.
+        #
+        #   그래서 cuda 만 device_map 을 쓴다. 최대 메모리가 문제가 되는 곳도
+        #   거기다 — 24GB GPU 에 9B(~19GB)를 `.to()` 로 올리면 38GB 가 필요해
+        #   똑같이 죽는다. mps 는 8B 가 애초에 안 들어가므로 두 배를 감수해도 잃는
+        #   것이 없다.
+        kwargs = {"dtype": dtype}
+        if self.device == "cuda":
+            kwargs["device_map"] = self.device
+        self._model = AutoModelForCausalLM.from_pretrained(self.model_name, **kwargs)
+        if "device_map" not in kwargs:
+            self._model = self._model.to(self.device)
         self._model.eval()
         torch.set_grad_enabled(False)
         log.info("로컬 모델 로드 완료 — %.1f초", time.perf_counter() - started)
