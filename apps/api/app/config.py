@@ -55,7 +55,12 @@ class Settings(BaseSettings):
     # 생성 백엔드. `local` 은 외부 호출을 **하나도** 하지 않는다 — planner §15.2 의
     # 국내 리전 원칙이 문구 수정이 아니라 실제로 충족되는 경로다(ADR-004).
     # `app/rag/embed.py` 의 백엔드 추상화와 같은 형태로 둔다.
-    llm_backend: Literal["anthropic", "local"] = "anthropic"
+    # ★ 기본값을 `local` 로 돌렸다(2026-08-17). `Qwen/Qwen3.5-4B` 배선 검증이
+    #   끝났고, ADR-004 가 노리는 "외부로 나가는 것이 없다"가 기본 경로여야 그
+    #   주장이 실제 동작과 일치한다. **AnthropicClient 는 그대로 남는다** —
+    #   실측이 미달이면 `LLM_BACKEND=anthropic` 한 줄로 되돌아가고, 커밋된
+    #   exp_002~005 리포트의 재현성도 그 경로로 유지된다.
+    llm_backend: Literal["anthropic", "local"] = "local"
 
     anthropic_api_key: str = Field(default="", description="비어 있으면 생성 기능이 비활성화된다")
     llm_model: str = "claude-sonnet-5"
