@@ -201,6 +201,66 @@ class TestFinalize:
         assert r.fallback_reason is FallbackReason.UNSUPPORTED_NUMBER
 
 
+class TestOutputLanguage:
+    """⑧ 출력 언어 검사.
+
+    ★ 이 검사는 한동안 **채점기에만** 있었다. 인용이 맞고 숫자가 맞아도 요청 언어가
+    아니면 이용자에게는 읽을 수 없는 답변인데, 그대로 나가고 있었다.
+    """
+
+    KO_ANSWER = ("한도제한계좌는 하루 인터넷뱅킹으로 이체할 수 있는 금액이 정해져 "
+                 "있습니다. 한도를 풀려면 거래 목적을 증명하는 서류가 필요합니다.")
+    VI_ANSWER = ("Tài khoản hạn chế giao dịch có giới hạn chuyển khoản mỗi ngày. "
+                 "Bạn cần giấy tờ chứng minh mục đích giao dịch để gỡ bỏ hạn mức.")
+    EN_ANSWER = ("A limited-transaction account caps how much you can transfer each day. "
+                 "You need documents proving your transaction purpose to lift it.")
+
+    @pytest.mark.parametrize("lang", [Lang.VI, Lang.EN])
+    def test_korean_answer_to_non_korean_request_is_blocked(self, lang):
+        r = finalize(answer(answer=self.KO_ANSWER, numbers_used=[]), make_ctx(), lang)
+        assert r.fallback_reason is FallbackReason.LANGUAGE_MISMATCH
+
+    @pytest.mark.parametrize("lang,text", [
+        (Lang.KO, KO_ANSWER), (Lang.VI, VI_ANSWER), (Lang.EN, EN_ANSWER),
+    ])
+    def test_matching_language_passes(self, lang, text):
+        r = finalize(answer(answer=text, numbers_used=[]), make_ctx(), lang)
+        assert r.fallback_reason is None
+
+    def test_korean_gloss_in_english_answer_is_not_a_mismatch(self):
+        """시스템 프롬프트가 **한국어 원어 병기를 지시한다** — 병기를 이탈로 보면
+        정상 답변이 막힌다. 그래서 '한글 유무'가 아니라 '비율'로 판정한다."""
+        glossed = ("A limited-transaction account (한도제한계좌) caps daily transfers. "
+                   "You need documents proving your transaction purpose to lift it.")
+        r = finalize(answer(answer=glossed, numbers_used=[]), make_ctx(), Lang.EN)
+        assert r.fallback_reason is None
+
+    def test_short_answer_is_not_judged(self):
+        """판정 불가(None)를 실패로 취급하면 짧은 정상 답변이 막힌다.
+        `finalize` 가 `is False` 로 검사하는 이유다."""
+        r = finalize(answer(answer="Yes, you can.", numbers_used=[]),
+                     make_ctx(), Lang.EN)
+        assert r.fallback_reason is None
+
+    def test_citation_check_runs_before_language(self):
+        """인용이 아예 없으면 언어를 볼 것도 없다 — 싸고 확실한 것부터."""
+        r = finalize(answer(answer=self.KO_ANSWER, citations=[], numbers_used=[]),
+                     make_ctx(), Lang.VI)
+        assert r.fallback_reason is FallbackReason.NO_CITATION
+
+    def test_fallback_text_is_in_the_requested_language(self):
+        """차단 사유가 '언어 이탈'인데 폴백까지 엉뚱한 언어로 나가면 의미가 없다."""
+        r = finalize(answer(answer=self.KO_ANSWER, numbers_used=[]),
+                     make_ctx(), Lang.VI)
+        assert r.answer == fallback_text(FallbackReason.LANGUAGE_MISMATCH, Lang.VI)
+        assert "Chúng tôi" in r.answer
+
+    def test_evidence_still_visible_on_block(self):
+        r = finalize(answer(answer=self.KO_ANSWER, numbers_used=[]),
+                     make_ctx(n=3), Lang.EN)
+        assert len(r.refs) == 3
+
+
 class TestFallbackTemplates:
     @pytest.mark.parametrize("lang", list(Lang))
     @pytest.mark.parametrize("reason", list(FallbackReason))

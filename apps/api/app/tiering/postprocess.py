@@ -12,9 +12,10 @@
     3. 숫자 대조      → 근거에 없는 수치면 차단  ★환각의 대부분이 여기서 잡힌다
     4. 금지 표현      → "반드시 승인" 등이면 차단
     5. 민감정보 요구  → 답변이 계좌·비밀번호를 물으면 차단 (사칭 대응)
-    6. 계층 강등      → 근거가 약하면 A→B
-    7. 계층 C 확정    → 모델 판단과 무관하게 폴백
-    8. 계층 B 문구    → 사전확인 권고 강제 삽입
+    6. 출력 언어      → 요청 언어가 아니면 차단  ★다국어 서비스의 최소 조건
+    7. 계층 강등      → 근거가 약하면 A→B
+    8. 계층 C 확정    → 모델 판단과 무관하게 폴백
+    9. 계층 B 문구    → 사전확인 권고 강제 삽입
 """
 
 from __future__ import annotations
@@ -27,6 +28,7 @@ from app.rag.context import EvidenceContext
 from app.schemas.common import EvidenceRef, FallbackReason, Lang, Tier
 from app.schemas.llm import LLMAnswer
 from app.tiering.rules import find_credential_request, find_forbidden
+from app.util.language import detect_answer_language
 from app.util.numerals import numeral_supported
 
 log = logging.getLogger(__name__)
@@ -106,7 +108,18 @@ def finalize(answer: LLMAnswer, ctx: EvidenceContext, lang: Lang) -> FinalRespon
         log.warning("차단: 답변이 민감정보를 요구함 %r", hit)
         return make_fallback(FallbackReason.CREDENTIAL_REQUEST, lang, ctx.refs)
 
-    # ── 6. 계층 강등 ────────────────────────────────────────────────
+    # ── 6. 출력 언어 ★ ──────────────────────────────────────────────
+    # 요청 언어가 아닌 언어로 답하면, 인용이 맞고 숫자가 맞아도 이용자에게는
+    # **읽을 수 없는 답변**이다. 형식 검사를 다 통과한 뒤·계층을 매기기 전이
+    # 이 검사의 자리다 — 내보낼 수 없는 답변에 계층을 붙일 이유가 없다.
+    #
+    # `is False` 로 검사한다. `detect_answer_language` 는 판정 불가에 None 을
+    # 주므로 `not ...` 로 쓰면 짧은 정상 답변까지 막힌다.
+    if detect_answer_language(answer.answer, lang.value) is False:
+        log.info("차단: 요청 언어(%s)가 아닌 언어로 답변", lang.value)
+        return make_fallback(FallbackReason.LANGUAGE_MISMATCH, lang, ctx.refs)
+
+    # ── 7. 계층 강등 ────────────────────────────────────────────────
     tier = answer.tier
     original = tier
     if tier is Tier.A and not ctx.all_government:
@@ -118,7 +131,7 @@ def finalize(answer: LLMAnswer, ctx: EvidenceContext, lang: Lang) -> FinalRespon
     if answer.needs_confirmation and tier is Tier.A:
         tier = Tier.B
 
-    # ── 7. 계층 B 강제 문구 ─────────────────────────────────────────
+    # ── 9. 계층 B 강제 문구 ─────────────────────────────────────────
     text = answer.answer
     if tier is Tier.B:
         text = prepend_generic_notice(text, lang)

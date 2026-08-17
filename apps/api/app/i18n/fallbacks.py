@@ -133,6 +133,10 @@ _ALIASES: dict[FallbackReason, FallbackReason] = {
     FallbackReason.FORBIDDEN_EXPRESSION: FallbackReason.LOW_CONFIDENCE,
     FallbackReason.CREDENTIAL_REQUEST: FallbackReason.LOW_CONFIDENCE,
     FallbackReason.OUT_OF_SCOPE: FallbackReason.LOW_CONFIDENCE,
+    # 언어 이탈도 같은 문구로 낸다. 폴백 문구 자체는 **요청 언어로** 나가므로
+    # ("답을 찾지 못했다"를 vi 로) 이용자가 읽을 수 있는 상태가 회복된다.
+    # 사유를 밝혀 봐야 "AI가 엉뚱한 언어로 답했다"는 사실만 전달된다.
+    FallbackReason.LANGUAGE_MISMATCH: FallbackReason.LOW_CONFIDENCE,
 }
 
 # 계층 B 강제 문구 (planner §7.1). 기관 개별 명시 근거가 없을 때 붙인다.
