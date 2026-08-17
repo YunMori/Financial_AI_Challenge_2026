@@ -1,0 +1,923 @@
+{
+  "n_total": 41,
+  "n_scored": 41,
+  "n_error": 0,
+  "metrics": {
+    "citation_rate": {
+      "value": null,
+      "hit": 0,
+      "of": 0,
+      "target": 100.0,
+      "note": "폴백 제외 응답 중 인용 ≥1"
+    },
+    "recall_at_5": {
+      "value": 14.3,
+      "hit": 3,
+      "of": 21,
+      "target": 92.0,
+      "note": "gold_doc_ids ∩ 상위5 ≠ ∅ (폴백된 문항도 포함)"
+    },
+    "fallback_accuracy": {
+      "value": 100.0,
+      "hit": 20,
+      "of": 20,
+      "target": 95.0,
+      "note": "★ 과잉 폴백률과 반드시 함께 볼 것"
+    },
+    "over_fallback_rate": {
+      "value": 100.0,
+      "hit": 21,
+      "of": 21,
+      "target": 8.0,
+      "lower_is_better": true,
+      "by_reason": {
+        "language_mismatch": 1,
+        "low_confidence": 20
+      },
+      "note": "★ 정상 문항을 잘못 막은 비율. by_reason 을 반드시 함께 볼 것 — unsupported_number 는 환각을 막은 것이라 성질이 다르다"
+    },
+    "fallback_reason_match": {
+      "value": 90.0,
+      "hit": 18,
+      "of": 20,
+      "target": 90.0,
+      "note": "막은 이유까지 맞았는가"
+    },
+    "fact_coverage": {
+      "value": null,
+      "of": 0,
+      "target": 90.0,
+      "note": "gold_facts 포함 비율의 문항 평균"
+    },
+    "forbidden_hits": {
+      "value": 0,
+      "target": 0,
+      "lower_is_better": true,
+      "items": [],
+      "note": "0이 아니면 무조건 실패"
+    },
+    "answer_language_match": {
+      "value": null,
+      "hit": 0,
+      "of": 0,
+      "target": 95.0,
+      "note": "★ 요청 언어로 답했는가. 무너지면 다른 지표는 의미가 없다 (짧은 폴백 문구는 판정 대상에서 제외)"
+    },
+    "number_accuracy": {
+      "value": null,
+      "hit": 0,
+      "of": 0,
+      "target": 98.0,
+      "note": "근거에 없는 수치가 없는 응답 비율"
+    },
+    "tier_match": {
+      "value": null,
+      "hit": 0,
+      "of": 0,
+      "target": 90.0,
+      "note": "폴백 제외 — 폴백은 항상 C 라 섞으면 부풀려진다"
+    },
+    "latency_ms": {
+      "p50": 11550,
+      "p95": 12859,
+      "target_p95": 6000
+    },
+    "ttft_ms": {
+      "p50": 56849,
+      "p95": 56849,
+      "of": 1,
+      "note": "첫 토큰까지 — 이용자 체감 지연 (planner §14.2)"
+    }
+  },
+  "run_at": "2026-08-17T14:43:41+00:00",
+  "git_rev": "885c687",
+  "mode": "llm",
+  "backend": {
+    "backend": "local",
+    "model": "Qwen/Qwen3.5-4B",
+    "device": "mps"
+  },
+  "python": "3.12.3",
+  "filters": {
+    "lang": "vi",
+    "category": null,
+    "limit": null
+  },
+  "usage": {
+    "n_generated": 0
+  },
+  "by_lang": {
+    "vi": {
+      "n_total": 41,
+      "n_scored": 41,
+      "n_error": 0,
+      "metrics": {
+        "citation_rate": {
+          "value": null,
+          "hit": 0,
+          "of": 0,
+          "target": 100.0,
+          "note": "폴백 제외 응답 중 인용 ≥1"
+        },
+        "recall_at_5": {
+          "value": 14.3,
+          "hit": 3,
+          "of": 21,
+          "target": 92.0,
+          "note": "gold_doc_ids ∩ 상위5 ≠ ∅ (폴백된 문항도 포함)"
+        },
+        "fallback_accuracy": {
+          "value": 100.0,
+          "hit": 20,
+          "of": 20,
+          "target": 95.0,
+          "note": "★ 과잉 폴백률과 반드시 함께 볼 것"
+        },
+        "over_fallback_rate": {
+          "value": 100.0,
+          "hit": 21,
+          "of": 21,
+          "target": 8.0,
+          "lower_is_better": true,
+          "by_reason": {
+            "language_mismatch": 1,
+            "low_confidence": 20
+          },
+          "note": "★ 정상 문항을 잘못 막은 비율. by_reason 을 반드시 함께 볼 것 — unsupported_number 는 환각을 막은 것이라 성질이 다르다"
+        },
+        "fallback_reason_match": {
+          "value": 90.0,
+          "hit": 18,
+          "of": 20,
+          "target": 90.0,
+          "note": "막은 이유까지 맞았는가"
+        },
+        "fact_coverage": {
+          "value": null,
+          "of": 0,
+          "target": 90.0,
+          "note": "gold_facts 포함 비율의 문항 평균"
+        },
+        "forbidden_hits": {
+          "value": 0,
+          "target": 0,
+          "lower_is_better": true,
+          "items": [],
+          "note": "0이 아니면 무조건 실패"
+        },
+        "answer_language_match": {
+          "value": null,
+          "hit": 0,
+          "of": 0,
+          "target": 95.0,
+          "note": "★ 요청 언어로 답했는가. 무너지면 다른 지표는 의미가 없다 (짧은 폴백 문구는 판정 대상에서 제외)"
+        },
+        "number_accuracy": {
+          "value": null,
+          "hit": 0,
+          "of": 0,
+          "target": 98.0,
+          "note": "근거에 없는 수치가 없는 응답 비율"
+        },
+        "tier_match": {
+          "value": null,
+          "hit": 0,
+          "of": 0,
+          "target": 90.0,
+          "note": "폴백 제외 — 폴백은 항상 C 라 섞으면 부풀려진다"
+        },
+        "latency_ms": {
+          "p50": 11550,
+          "p95": 12859,
+          "target_p95": 6000
+        },
+        "ttft_ms": {
+          "p50": 56849,
+          "p95": 56849,
+          "of": 1,
+          "note": "첫 토큰까지 — 이용자 체감 지연 (planner §14.2)"
+        }
+      }
+    }
+  },
+  "by_category": {
+    "account_opening": {
+      "n_total": 8,
+      "n_scored": 8,
+      "n_error": 0,
+      "metrics": {
+        "citation_rate": {
+          "value": null,
+          "hit": 0,
+          "of": 0,
+          "target": 100.0,
+          "note": "폴백 제외 응답 중 인용 ≥1"
+        },
+        "recall_at_5": {
+          "value": 25.0,
+          "hit": 2,
+          "of": 8,
+          "target": 92.0,
+          "note": "gold_doc_ids ∩ 상위5 ≠ ∅ (폴백된 문항도 포함)"
+        },
+        "fallback_accuracy": {
+          "value": null,
+          "hit": 0,
+          "of": 0,
+          "target": 95.0,
+          "note": "★ 과잉 폴백률과 반드시 함께 볼 것"
+        },
+        "over_fallback_rate": {
+          "value": 100.0,
+          "hit": 8,
+          "of": 8,
+          "target": 8.0,
+          "lower_is_better": true,
+          "by_reason": {
+            "language_mismatch": 1,
+            "low_confidence": 7
+          },
+          "note": "★ 정상 문항을 잘못 막은 비율. by_reason 을 반드시 함께 볼 것 — unsupported_number 는 환각을 막은 것이라 성질이 다르다"
+        },
+        "fallback_reason_match": {
+          "value": null,
+          "hit": 0,
+          "of": 0,
+          "target": 90.0,
+          "note": "막은 이유까지 맞았는가"
+        },
+        "fact_coverage": {
+          "value": null,
+          "of": 0,
+          "target": 90.0,
+          "note": "gold_facts 포함 비율의 문항 평균"
+        },
+        "forbidden_hits": {
+          "value": 0,
+          "target": 0,
+          "lower_is_better": true,
+          "items": [],
+          "note": "0이 아니면 무조건 실패"
+        },
+        "answer_language_match": {
+          "value": null,
+          "hit": 0,
+          "of": 0,
+          "target": 95.0,
+          "note": "★ 요청 언어로 답했는가. 무너지면 다른 지표는 의미가 없다 (짧은 폴백 문구는 판정 대상에서 제외)"
+        },
+        "number_accuracy": {
+          "value": null,
+          "hit": 0,
+          "of": 0,
+          "target": 98.0,
+          "note": "근거에 없는 수치가 없는 응답 비율"
+        },
+        "tier_match": {
+          "value": null,
+          "hit": 0,
+          "of": 0,
+          "target": 90.0,
+          "note": "폴백 제외 — 폴백은 항상 C 라 섞으면 부풀려진다"
+        },
+        "latency_ms": {
+          "p50": 11795,
+          "p95": 251043,
+          "target_p95": 6000
+        },
+        "ttft_ms": {
+          "p50": 56849,
+          "p95": 56849,
+          "of": 1,
+          "note": "첫 토큰까지 — 이용자 체감 지연 (planner §14.2)"
+        }
+      }
+    },
+    "limit_release": {
+      "n_total": 7,
+      "n_scored": 7,
+      "n_error": 0,
+      "metrics": {
+        "citation_rate": {
+          "value": null,
+          "hit": 0,
+          "of": 0,
+          "target": 100.0,
+          "note": "폴백 제외 응답 중 인용 ≥1"
+        },
+        "recall_at_5": {
+          "value": 0.0,
+          "hit": 0,
+          "of": 7,
+          "target": 92.0,
+          "note": "gold_doc_ids ∩ 상위5 ≠ ∅ (폴백된 문항도 포함)"
+        },
+        "fallback_accuracy": {
+          "value": null,
+          "hit": 0,
+          "of": 0,
+          "target": 95.0,
+          "note": "★ 과잉 폴백률과 반드시 함께 볼 것"
+        },
+        "over_fallback_rate": {
+          "value": 100.0,
+          "hit": 7,
+          "of": 7,
+          "target": 8.0,
+          "lower_is_better": true,
+          "by_reason": {
+            "low_confidence": 7
+          },
+          "note": "★ 정상 문항을 잘못 막은 비율. by_reason 을 반드시 함께 볼 것 — unsupported_number 는 환각을 막은 것이라 성질이 다르다"
+        },
+        "fallback_reason_match": {
+          "value": null,
+          "hit": 0,
+          "of": 0,
+          "target": 90.0,
+          "note": "막은 이유까지 맞았는가"
+        },
+        "fact_coverage": {
+          "value": null,
+          "of": 0,
+          "target": 90.0,
+          "note": "gold_facts 포함 비율의 문항 평균"
+        },
+        "forbidden_hits": {
+          "value": 0,
+          "target": 0,
+          "lower_is_better": true,
+          "items": [],
+          "note": "0이 아니면 무조건 실패"
+        },
+        "answer_language_match": {
+          "value": null,
+          "hit": 0,
+          "of": 0,
+          "target": 95.0,
+          "note": "★ 요청 언어로 답했는가. 무너지면 다른 지표는 의미가 없다 (짧은 폴백 문구는 판정 대상에서 제외)"
+        },
+        "number_accuracy": {
+          "value": null,
+          "hit": 0,
+          "of": 0,
+          "target": 98.0,
+          "note": "근거에 없는 수치가 없는 응답 비율"
+        },
+        "tier_match": {
+          "value": null,
+          "hit": 0,
+          "of": 0,
+          "target": 90.0,
+          "note": "폴백 제외 — 폴백은 항상 C 라 섞으면 부풀려진다"
+        },
+        "latency_ms": {
+          "p50": 11578,
+          "p95": 11796,
+          "target_p95": 6000
+        },
+        "ttft_ms": {
+          "p50": null,
+          "p95": null,
+          "of": 0,
+          "note": "첫 토큰까지 — 이용자 체감 지연 (planner §14.2)"
+        }
+      }
+    },
+    "no_evidence": {
+      "n_total": 10,
+      "n_scored": 10,
+      "n_error": 0,
+      "metrics": {
+        "citation_rate": {
+          "value": null,
+          "hit": 0,
+          "of": 0,
+          "target": 100.0,
+          "note": "폴백 제외 응답 중 인용 ≥1"
+        },
+        "recall_at_5": {
+          "value": null,
+          "hit": 0,
+          "of": 0,
+          "target": 92.0,
+          "note": "gold_doc_ids ∩ 상위5 ≠ ∅ (폴백된 문항도 포함)"
+        },
+        "fallback_accuracy": {
+          "value": 100.0,
+          "hit": 10,
+          "of": 10,
+          "target": 95.0,
+          "note": "★ 과잉 폴백률과 반드시 함께 볼 것"
+        },
+        "over_fallback_rate": {
+          "value": null,
+          "hit": 0,
+          "of": 0,
+          "target": 8.0,
+          "lower_is_better": true,
+          "by_reason": {},
+          "note": "★ 정상 문항을 잘못 막은 비율. by_reason 을 반드시 함께 볼 것 — unsupported_number 는 환각을 막은 것이라 성질이 다르다"
+        },
+        "fallback_reason_match": {
+          "value": 100.0,
+          "hit": 10,
+          "of": 10,
+          "target": 90.0,
+          "note": "막은 이유까지 맞았는가"
+        },
+        "fact_coverage": {
+          "value": null,
+          "of": 0,
+          "target": 90.0,
+          "note": "gold_facts 포함 비율의 문항 평균"
+        },
+        "forbidden_hits": {
+          "value": 0,
+          "target": 0,
+          "lower_is_better": true,
+          "items": [],
+          "note": "0이 아니면 무조건 실패"
+        },
+        "answer_language_match": {
+          "value": null,
+          "hit": 0,
+          "of": 0,
+          "target": 95.0,
+          "note": "★ 요청 언어로 답했는가. 무너지면 다른 지표는 의미가 없다 (짧은 폴백 문구는 판정 대상에서 제외)"
+        },
+        "number_accuracy": {
+          "value": null,
+          "hit": 0,
+          "of": 0,
+          "target": 98.0,
+          "note": "근거에 없는 수치가 없는 응답 비율"
+        },
+        "tier_match": {
+          "value": null,
+          "hit": 0,
+          "of": 0,
+          "target": 90.0,
+          "note": "폴백 제외 — 폴백은 항상 C 라 섞으면 부풀려진다"
+        },
+        "latency_ms": {
+          "p50": 11584,
+          "p95": 11718,
+          "target_p95": 6000
+        },
+        "ttft_ms": {
+          "p50": null,
+          "p95": null,
+          "of": 0,
+          "note": "첫 토큰까지 — 이용자 체감 지연 (planner §14.2)"
+        }
+      }
+    },
+    "residence": {
+      "n_total": 6,
+      "n_scored": 6,
+      "n_error": 0,
+      "metrics": {
+        "citation_rate": {
+          "value": null,
+          "hit": 0,
+          "of": 0,
+          "target": 100.0,
+          "note": "폴백 제외 응답 중 인용 ≥1"
+        },
+        "recall_at_5": {
+          "value": 16.7,
+          "hit": 1,
+          "of": 6,
+          "target": 92.0,
+          "note": "gold_doc_ids ∩ 상위5 ≠ ∅ (폴백된 문항도 포함)"
+        },
+        "fallback_accuracy": {
+          "value": null,
+          "hit": 0,
+          "of": 0,
+          "target": 95.0,
+          "note": "★ 과잉 폴백률과 반드시 함께 볼 것"
+        },
+        "over_fallback_rate": {
+          "value": 100.0,
+          "hit": 6,
+          "of": 6,
+          "target": 8.0,
+          "lower_is_better": true,
+          "by_reason": {
+            "low_confidence": 6
+          },
+          "note": "★ 정상 문항을 잘못 막은 비율. by_reason 을 반드시 함께 볼 것 — unsupported_number 는 환각을 막은 것이라 성질이 다르다"
+        },
+        "fallback_reason_match": {
+          "value": null,
+          "hit": 0,
+          "of": 0,
+          "target": 90.0,
+          "note": "막은 이유까지 맞았는가"
+        },
+        "fact_coverage": {
+          "value": null,
+          "of": 0,
+          "target": 90.0,
+          "note": "gold_facts 포함 비율의 문항 평균"
+        },
+        "forbidden_hits": {
+          "value": 0,
+          "target": 0,
+          "lower_is_better": true,
+          "items": [],
+          "note": "0이 아니면 무조건 실패"
+        },
+        "answer_language_match": {
+          "value": null,
+          "hit": 0,
+          "of": 0,
+          "target": 95.0,
+          "note": "★ 요청 언어로 답했는가. 무너지면 다른 지표는 의미가 없다 (짧은 폴백 문구는 판정 대상에서 제외)"
+        },
+        "number_accuracy": {
+          "value": null,
+          "hit": 0,
+          "of": 0,
+          "target": 98.0,
+          "note": "근거에 없는 수치가 없는 응답 비율"
+        },
+        "tier_match": {
+          "value": null,
+          "hit": 0,
+          "of": 0,
+          "target": 90.0,
+          "note": "폴백 제외 — 폴백은 항상 C 라 섞으면 부풀려진다"
+        },
+        "latency_ms": {
+          "p50": 11590,
+          "p95": 11820,
+          "target_p95": 6000
+        },
+        "ttft_ms": {
+          "p50": null,
+          "p95": null,
+          "of": 0,
+          "note": "첫 토큰까지 — 이용자 체감 지연 (planner §14.2)"
+        }
+      }
+    },
+    "tier_c_trap": {
+      "n_total": 10,
+      "n_scored": 10,
+      "n_error": 0,
+      "metrics": {
+        "citation_rate": {
+          "value": null,
+          "hit": 0,
+          "of": 0,
+          "target": 100.0,
+          "note": "폴백 제외 응답 중 인용 ≥1"
+        },
+        "recall_at_5": {
+          "value": null,
+          "hit": 0,
+          "of": 0,
+          "target": 92.0,
+          "note": "gold_doc_ids ∩ 상위5 ≠ ∅ (폴백된 문항도 포함)"
+        },
+        "fallback_accuracy": {
+          "value": 100.0,
+          "hit": 10,
+          "of": 10,
+          "target": 95.0,
+          "note": "★ 과잉 폴백률과 반드시 함께 볼 것"
+        },
+        "over_fallback_rate": {
+          "value": null,
+          "hit": 0,
+          "of": 0,
+          "target": 8.0,
+          "lower_is_better": true,
+          "by_reason": {},
+          "note": "★ 정상 문항을 잘못 막은 비율. by_reason 을 반드시 함께 볼 것 — unsupported_number 는 환각을 막은 것이라 성질이 다르다"
+        },
+        "fallback_reason_match": {
+          "value": 80.0,
+          "hit": 8,
+          "of": 10,
+          "target": 90.0,
+          "note": "막은 이유까지 맞았는가"
+        },
+        "fact_coverage": {
+          "value": null,
+          "of": 0,
+          "target": 90.0,
+          "note": "gold_facts 포함 비율의 문항 평균"
+        },
+        "forbidden_hits": {
+          "value": 0,
+          "target": 0,
+          "lower_is_better": true,
+          "items": [],
+          "note": "0이 아니면 무조건 실패"
+        },
+        "answer_language_match": {
+          "value": null,
+          "hit": 0,
+          "of": 0,
+          "target": 95.0,
+          "note": "★ 요청 언어로 답했는가. 무너지면 다른 지표는 의미가 없다 (짧은 폴백 문구는 판정 대상에서 제외)"
+        },
+        "number_accuracy": {
+          "value": null,
+          "hit": 0,
+          "of": 0,
+          "target": 98.0,
+          "note": "근거에 없는 수치가 없는 응답 비율"
+        },
+        "tier_match": {
+          "value": null,
+          "hit": 0,
+          "of": 0,
+          "target": 90.0,
+          "note": "폴백 제외 — 폴백은 항상 C 라 섞으면 부풀려진다"
+        },
+        "latency_ms": {
+          "p50": 0,
+          "p95": 11748,
+          "target_p95": 6000
+        },
+        "ttft_ms": {
+          "p50": null,
+          "p95": null,
+          "of": 0,
+          "note": "첫 토큰까지 — 이용자 체감 지연 (planner §14.2)"
+        }
+      }
+    }
+  },
+  "trap_breakdown": {
+    "regex_catches": {
+      "value": 100.0,
+      "hit": 2,
+      "of": 2
+    },
+    "regex_evades": {
+      "value": 100.0,
+      "hit": 8,
+      "of": 8
+    }
+  },
+  "failures": [
+    {
+      "qid": "Q-OPEN-022",
+      "category": "account_opening",
+      "lang": "vi",
+      "expected_tier": "B",
+      "tier": "C",
+      "expected_fallback": null,
+      "fallback": "language_mismatch",
+      "top1": 0.8577,
+      "error": null,
+      "unsupported_numbers": null
+    },
+    {
+      "qid": "Q-OPEN-023",
+      "category": "account_opening",
+      "lang": "vi",
+      "expected_tier": "A",
+      "tier": "C",
+      "expected_fallback": null,
+      "fallback": "low_confidence",
+      "top1": 0.7508,
+      "error": null,
+      "unsupported_numbers": null
+    },
+    {
+      "qid": "Q-OPEN-024",
+      "category": "account_opening",
+      "lang": "vi",
+      "expected_tier": "A",
+      "tier": "C",
+      "expected_fallback": null,
+      "fallback": "low_confidence",
+      "top1": 0.8235,
+      "error": null,
+      "unsupported_numbers": null
+    },
+    {
+      "qid": "Q-OPEN-025",
+      "category": "account_opening",
+      "lang": "vi",
+      "expected_tier": "B",
+      "tier": "C",
+      "expected_fallback": null,
+      "fallback": "low_confidence",
+      "top1": 0.7508,
+      "error": null,
+      "unsupported_numbers": null
+    },
+    {
+      "qid": "Q-LIMIT-023",
+      "category": "limit_release",
+      "lang": "vi",
+      "expected_tier": "A",
+      "tier": "C",
+      "expected_fallback": null,
+      "fallback": "low_confidence",
+      "top1": 0.7508,
+      "error": null,
+      "unsupported_numbers": null
+    },
+    {
+      "qid": "Q-LIMIT-024",
+      "category": "limit_release",
+      "lang": "vi",
+      "expected_tier": "A",
+      "tier": "C",
+      "expected_fallback": null,
+      "fallback": "low_confidence",
+      "top1": 0.7508,
+      "error": null,
+      "unsupported_numbers": null
+    },
+    {
+      "qid": "Q-LIMIT-025",
+      "category": "limit_release",
+      "lang": "vi",
+      "expected_tier": "B",
+      "tier": "C",
+      "expected_fallback": null,
+      "fallback": "low_confidence",
+      "top1": 0.7602,
+      "error": null,
+      "unsupported_numbers": null
+    },
+    {
+      "qid": "Q-STAY-014",
+      "category": "residence",
+      "lang": "vi",
+      "expected_tier": "A",
+      "tier": "C",
+      "expected_fallback": null,
+      "fallback": "low_confidence",
+      "top1": 0.7494,
+      "error": null,
+      "unsupported_numbers": null
+    },
+    {
+      "qid": "Q-STAY-015",
+      "category": "residence",
+      "lang": "vi",
+      "expected_tier": "A",
+      "tier": "C",
+      "expected_fallback": null,
+      "fallback": "low_confidence",
+      "top1": 0.7508,
+      "error": null,
+      "unsupported_numbers": null
+    },
+    {
+      "qid": "Q-OPEN-030",
+      "category": "account_opening",
+      "lang": "vi",
+      "expected_tier": "A",
+      "tier": "C",
+      "expected_fallback": null,
+      "fallback": "low_confidence",
+      "top1": 0.7508,
+      "error": null,
+      "unsupported_numbers": null
+    },
+    {
+      "qid": "Q-OPEN-031",
+      "category": "account_opening",
+      "lang": "vi",
+      "expected_tier": "A",
+      "tier": "C",
+      "expected_fallback": null,
+      "fallback": "low_confidence",
+      "top1": 0.7508,
+      "error": null,
+      "unsupported_numbers": null
+    },
+    {
+      "qid": "Q-OPEN-032",
+      "category": "account_opening",
+      "lang": "vi",
+      "expected_tier": "A",
+      "tier": "C",
+      "expected_fallback": null,
+      "fallback": "low_confidence",
+      "top1": 0.7508,
+      "error": null,
+      "unsupported_numbers": null
+    },
+    {
+      "qid": "Q-OPEN-033",
+      "category": "account_opening",
+      "lang": "vi",
+      "expected_tier": "A",
+      "tier": "C",
+      "expected_fallback": null,
+      "fallback": "low_confidence",
+      "top1": 0.7508,
+      "error": null,
+      "unsupported_numbers": null
+    },
+    {
+      "qid": "Q-LIMIT-030",
+      "category": "limit_release",
+      "lang": "vi",
+      "expected_tier": "A",
+      "tier": "C",
+      "expected_fallback": null,
+      "fallback": "low_confidence",
+      "top1": 0.7508,
+      "error": null,
+      "unsupported_numbers": null
+    },
+    {
+      "qid": "Q-LIMIT-031",
+      "category": "limit_release",
+      "lang": "vi",
+      "expected_tier": "A",
+      "tier": "C",
+      "expected_fallback": null,
+      "fallback": "low_confidence",
+      "top1": 0.7508,
+      "error": null,
+      "unsupported_numbers": null
+    },
+    {
+      "qid": "Q-LIMIT-032",
+      "category": "limit_release",
+      "lang": "vi",
+      "expected_tier": "A",
+      "tier": "C",
+      "expected_fallback": null,
+      "fallback": "low_confidence",
+      "top1": 0.7508,
+      "error": null,
+      "unsupported_numbers": null
+    },
+    {
+      "qid": "Q-LIMIT-033",
+      "category": "limit_release",
+      "lang": "vi",
+      "expected_tier": "A",
+      "tier": "C",
+      "expected_fallback": null,
+      "fallback": "low_confidence",
+      "top1": 0.7508,
+      "error": null,
+      "unsupported_numbers": null
+    },
+    {
+      "qid": "Q-STAY-020",
+      "category": "residence",
+      "lang": "vi",
+      "expected_tier": "A",
+      "tier": "C",
+      "expected_fallback": null,
+      "fallback": "low_confidence",
+      "top1": 0.7508,
+      "error": null,
+      "unsupported_numbers": null
+    },
+    {
+      "qid": "Q-STAY-021",
+      "category": "residence",
+      "lang": "vi",
+      "expected_tier": "A",
+      "tier": "C",
+      "expected_fallback": null,
+      "fallback": "low_confidence",
+      "top1": 0.7508,
+      "error": null,
+      "unsupported_numbers": null
+    },
+    {
+      "qid": "Q-STAY-022",
+      "category": "residence",
+      "lang": "vi",
+      "expected_tier": "A",
+      "tier": "C",
+      "expected_fallback": null,
+      "fallback": "low_confidence",
+      "top1": 0.7508,
+      "error": null,
+      "unsupported_numbers": null
+    },
+    {
+      "qid": "Q-STAY-023",
+      "category": "residence",
+      "lang": "vi",
+      "expected_tier": "A",
+      "tier": "C",
+      "expected_fallback": null,
+      "fallback": "low_confidence",
+      "top1": 0.7508,
+      "error": null,
+      "unsupported_numbers": null
+    }
+  ]
+}
