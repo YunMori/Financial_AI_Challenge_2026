@@ -9,7 +9,7 @@
 계획은 BGE-m3 를 상정했으나 **fastembed 는 BGE-m3 를 지원하지 않는다**
 (2026-08 기준 다국어 옵션: multilingual-e5-large / mpnet / MiniLM).
 BGE-m3·KURE 를 쓰려면 sentence-transformers(torch) 가 필요하고, 이는
-Render 메모리 예산에 직접 영향을 준다.
+배포 메모리 예산에 직접 영향을 준다(ADR-003 은 Render 전제로 쓰였고 AWS 기준 재작성 대기).
 
 그래서 지금 결정하지 않고 **교체 가능하게** 만들어 두고, Phase 7 의 컨테이너
 메모리 실측 후 ADR-003 으로 확정한다. `EMBED_BACKEND` 환경변수로 바꾼다.

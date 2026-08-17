@@ -54,7 +54,7 @@ cd apps/api && .venv/bin/python -m app.rag.cli "E-9 한도제한계좌 해제 �
 # 검색 신뢰도 임계값 재보정 — 임베딩 모델이나 코퍼스를 바꾸면 반드시 실행
 .venv/bin/python -m app.rag.cli --calibrate
 
-# 테스트 (278개)
+# 테스트 (345개)
 .venv/bin/python -m pytest -q
 
 # 골든셋 자동 채점 (planner §13) — 리포트는 커밋한다
