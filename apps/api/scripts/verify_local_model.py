@@ -89,18 +89,24 @@ def main() -> int:
     state: dict = {}
 
     # ── 1. 리포 접근성 ───────────────────────────────────────────────
-    def repo():
-        from huggingface_hub import model_info
-        i = model_info(args.model)
-        state["gated"] = i.gated
-        lic = next((t for t in (i.tags or []) if t.startswith("license:")), "license:?")
-        if i.gated:
-            raise RuntimeError(f"gated={i.gated} — HF 토큰이 필요하다 "
-                               f"(Gemma 3 가 401 로 막혔던 것과 같은 형태)")
-        return f"non-gated · {lic.split(':', 1)[1]}"
+    # 로컬 경로는 이 검사가 성립하지 않는다 — 게이팅도 라이선스 태그도 허브의
+    # 개념이다. `export_local_model.py` 의 산출물처럼 우리가 만든 디렉터리를
+    # 넘길 때는 건너뛴다. 원본 리포는 이미 이 검사를 통과했다.
+    if Path(args.model).is_dir():
+        print(f"  {WARN}리포 접근성 — 로컬 경로라 건너뛴다")
+    else:
+        def repo():
+            from huggingface_hub import model_info
+            i = model_info(args.model)
+            state["gated"] = i.gated
+            lic = next((t for t in (i.tags or []) if t.startswith("license:")), "license:?")
+            if i.gated:
+                raise RuntimeError(f"gated={i.gated} — HF 토큰이 필요하다 "
+                                   f"(Gemma 3 가 401 로 막혔던 것과 같은 형태)")
+            return f"non-gated · {lic.split(':', 1)[1]}"
 
-    if not check("리포 접근성", repo):
-        return 1
+        if not check("리포 접근성", repo):
+            return 1
 
     # ── 2. 설정 · vocab_size 위치 ★ ──────────────────────────────────
     def cfg():

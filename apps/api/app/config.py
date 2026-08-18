@@ -97,6 +97,25 @@ class Settings(BaseSettings):
     #
     # 확정은 AWS GPU 실측 후 ADR-004. 지금 값은 **MPS 에 올릴 수 있는 유일한 후보**다
     # (M3 Pro 18GB 에서 나머지는 메모리가 모자란다).
+    #
+    # ★ 이 값은 **로컬 경로도 받는다** (`from_pretrained` 가 그렇다).
+    #   `Qwen3.5-4B` 는 이름과 달리 `Qwen3_5ForConditionalGeneration` 이라
+    #   비전 타워(0.667GB · 7.2%)와 MTP 헤드(0.241GB · 2.6%)를 쓰지도 않으면서
+    #   싣고 있다. 그것을 떼어 낸 산출물을 만들 수 있다 (2026-08-18 실측:
+    #   9.32 → 8.43GB, 로드 28 → 17초, **로짓 최대차 0 — 무손실**):
+    #
+    #       python apps/api/scripts/export_local_model.py --stage textonly
+    #       LOCAL_MODEL=models/qwen35-4b-textonly
+    #
+    #   ★ 무손실인데도 **기본값으로 올리지 않는다.** `models/…` 는 새로 받은
+    #     체크아웃에 없어서, 기본값으로 두면 export 를 먼저 돌리지 않은 사람에게
+    #     기동 실패가 난다 — 이 필드가 gated repo 를 가리켜 `LLM_BACKEND=local`
+    #     이 죽어 있던 사고(커밋 64dc422)와 **같은 형태**다. 배포 경로가 정해질 때
+    #     함께 다룬다.
+    #
+    #   `--stage int8` 로 4.87GB 까지 줄지만 MPS 에서 8.7배 느려 이 장치에서는
+    #   판정할 수 없다 — AWS(CUDA)로 이월했다. 탈락이 아니다.
+    #   상세: docs/2026-08-18-model-slimming.md
     local_model: str = "Qwen/Qwen3.5-4B"
     # 개발은 mps(M3 Pro), 배포는 cuda(AWS g5/g6). 자동 선택하되 강제할 수 있게 둔다 —
     # 어느 장치로 돌았는지는 리포트에 남겨야 비교가 성립한다.

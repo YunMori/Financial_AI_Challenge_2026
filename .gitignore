@@ -14,6 +14,15 @@ corpus/stats/_incoming/
 data/
 apps/api/data/
 
+# 슬림화한 로컬 생성 모델 — 수 GB 다. 원본(HF 캐시)에서 언제든 재생성된다.
+#   python apps/api/scripts/export_local_model.py --stage textonly
+#   python apps/api/scripts/export_local_model.py --stage int8
+models/
+
+# 추출 동일성 검사의 중간 산출물 (로짓·토큰 캡처). 재생성된다.
+#   python apps/api/scripts/check_equivalence.py --capture …
+apps/api/.cache_equivalence/
+
 # Python
 __pycache__/
 *.py[cod]
