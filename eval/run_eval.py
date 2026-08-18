@@ -163,7 +163,44 @@ def backend_info() -> dict:
             "effort": s.llm_effort, "thinking": s.llm_thinking}
 
 
-def build_pipeline(no_llm: bool):
+class NormalizeOnlyClient:
+    """③ 는 실제 모델로 돌리고 ⑦ 은 하지 않는다 — `--no-generation`.
+
+    왜 필요한가
+    -----------
+    **Recall@5 는 ③ 정규화에만 의존한다.** 검색은 정규화된 검색어로 하고 ⑦ 의
+    산출물을 쓰지 않는다. 그런데 두 단계의 비용이 자릿수로 다르다 (int8 실측,
+    MPS):
+
+        ③ 정규화   20.8초 × 41문항 ≈ 14분      ← 잴 수 있다
+        ⑦ 생성     ~1600초 × 41   ≈ 18시간     ← 못 잰다
+
+    정규화 품질만 보려는데 생성까지 돌리면 **재려는 것의 100배를 기다린다.**
+    모델 변형(양자화 등)의 최약 고리가 vi 정규화라면 여기서 먼저 갈린다.
+
+    `--no-llm` 으로는 이걸 못 한다 — `NullLLMClient` 는 **번역기까지** 끄기
+    때문에(정규화도 LLM 호출이다) en·vi 질의가 자기 언어 그대로 검색된다.
+    그래서 재려는 대상 자체가 사라진다.
+
+    ⚠ 생성 의존 지표는 `--no-llm` 과 똑같이 **미측정**으로 남는다. `stream` 이
+      `GenerationFailed` 를 내면 파이프라인이 `UPSTREAM_ERROR` 폴백을 만드는데,
+      채점 쪽에서 그것을 폴백으로 세지 않고 되돌린다 — 판단이 아니라 미실행이다.
+    """
+
+    def __init__(self, inner) -> None:
+        self._inner = inner
+
+    async def translate_to_search_terms(self, query: str, lang: str) -> str:
+        return await self._inner.translate_to_search_terms(query, lang)
+
+    async def stream(self, *, system, user, lang):
+        from app.llm.base import GenerationFailed
+
+        raise GenerationFailed("--no-generation: 생성을 실행하지 않았습니다")
+        yield  # pragma: no cover - 시그니처를 제너레이터로 유지
+
+
+def build_pipeline(no_llm: bool, no_generation: bool = False):
     from app.config import get_settings
     from app.llm.base import NullLLMClient
     from app.pipeline import ChatPipeline
@@ -185,7 +222,13 @@ def build_pipeline(no_llm: bool):
     #   번역기가 빠져, 키가 있어도 ③ 이 passthrough 로 돌아간다. 그러면
     #   다국어 경로를 "번역이 꺼진 상태"로 재게 되는데, 그건 측정하려는
     #   대상이 아니다. 조립이 두 벌이면 언젠가 반드시 어긋난다.
-    return build_serving_pipeline(), False
+    pipeline = build_serving_pipeline()
+    if no_generation:
+        # ★ 서버와 같은 조립을 **그대로 쓰고** 생성만 막는다. 여기서 파이프라인을
+        #   따로 조립하면 ③ 의 번역기가 빠져 정규화가 passthrough 가 되는데,
+        #   그러면 재려던 것이 사라진다 (바로 위 주석과 같은 이유다).
+        pipeline._llm = NormalizeOnlyClient(pipeline._llm)  # noqa: SLF001
+    return pipeline, False
 
 
 def git_rev() -> str:
@@ -240,6 +283,8 @@ def main() -> int:
     ap.add_argument("--resume", type=Path,
                     help="이전 --partial 을 이어받아 남은 문항만 채점한다")
     ap.add_argument("--no-llm", action="store_true", help="검색·판정만 (키 불필요)")
+    ap.add_argument("--no-generation", action="store_true",
+                    help="③ 정규화는 실제로 돌리고 ⑦ 생성만 건너뛴다 — Recall@5 만 볼 때")
     ap.add_argument("--validate-only", action="store_true", help="스키마만 검사")
     ap.add_argument("--lang", choices=sorted(VALID_LANGS), help="해당 언어만")
     ap.add_argument("--category", help="해당 카테고리만")
@@ -289,9 +334,20 @@ def main() -> int:
             print("남은 문항이 없습니다 — 이어받은 결과로 리포트만 만듭니다.")
 
 
-    pipeline, no_llm = build_pipeline(args.no_llm)
+    if args.no_llm and args.no_generation:
+        # --no-llm 은 생성도 정규화도 하지 않는다. 함께 주면 --no-generation 이
+        # 아무 일도 하지 않으므로, 조용히 넘기지 않고 알린다.
+        print("★ --no-llm 과 --no-generation 을 함께 주면 --no-llm 이 이깁니다 "
+              "(정규화도 꺼집니다).\n")
+        args.no_generation = False
+
+    pipeline, no_llm = build_pipeline(args.no_llm, args.no_generation)
+    # 생성을 실행하지 않은 두 모드는 채점 후처리가 같다 — 생성 의존 지표를
+    # '미측정'으로 둔다. 다르게 다뤄야 하는 것은 **게이트 비교 가능성**뿐이다.
+    skip_gen = no_llm or args.no_generation
+    mode = "no-llm" if no_llm else ("no-gen" if args.no_generation else "llm")
     bi = backend_info()
-    print(f"채점 {len(rows)}문항 (mode={'no-llm' if no_llm else 'llm'}, "
+    print(f"채점 {len(rows)}문항 (mode={mode}, "
           f"backend={bi['backend']}, model={bi['model']}"
           + (f", device={bi['device']}" if "device" in bi else "") + ")")
 
@@ -330,7 +386,7 @@ def main() -> int:
         outcomes = sorted(resumed + outcomes, key=lambda o: order.get(o.qid, 1 << 30))
 
     reached_generation = 0
-    if no_llm:
+    if skip_gen:
         # 생성을 하지 않았으므로 생성 의존 지표는 **측정하지 않은 것**으로 둔다.
         # 빈 답변에 gold_facts 를 대조하면 0% 가 나오는데, 그건 품질이 아니라
         # 실행하지 않은 사실을 잘못 적은 것이다.
@@ -340,7 +396,8 @@ def main() -> int:
         #   "잘못 막힌 것"으로 집계돼 과잉 폴백률이 100% 로 나온다 —
         #   실제로 한 번 그렇게 나왔다. 규칙이 통과시킨 것으로 기록한다.
         #
-        # ★★ 같은 이유로 **비한국어의 게이트 지표는 llm 모드와 비교할 수 없다.**
+        # ★★ (`--no-llm` 한정) 같은 이유로 **비한국어의 게이트 지표는 llm 모드와
+        #   비교할 수 없다.**
         #   임계값은 질의 번역(③)이 켜진 상태로 보정돼 있는데, `--no-llm` 은
         #   번역도 하지 않는다(번역 역시 LLM 호출이다). 그래서 en·vi 질의가
         #   자기 언어 그대로 검색돼 점수가 낮게 나오고 무더기로 폴백된다 —
@@ -359,7 +416,7 @@ def main() -> int:
     report.update({
         "run_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "git_rev": git_rev(),
-        "mode": "no-llm" if no_llm else "llm",
+        "mode": mode,
         "backend": backend_info(),
         "python": platform.python_version(),
         "filters": {"lang": args.lang, "category": args.category, "limit": args.limit},
@@ -384,16 +441,28 @@ def main() -> int:
         ],
     })
 
-    if no_llm:
+    if skip_gen:
         report["reached_generation"] = reached_generation
+        # 폴백 관련 지표는 두 모드 모두 비교 불가다 — 생성 단계에서만 생기는
+        # 사유(no_citation·unsupported_number)가 통째로 빠지기 때문이다.
         report["gate_metrics_comparable"] = False
         n_non_ko = sum(1 for o in outcomes if o.lang != "ko")
-        print(f"\n※ --no-llm: {reached_generation}문항이 규칙을 통과해 생성 단계까지 갔습니다.")
+        print(f"\n※ --{'no-llm' if no_llm else 'no-generation'}: "
+              f"{reached_generation}문항이 규칙을 통과해 생성 단계까지 갔습니다.")
         print("  생성에 의존하는 지표는 '미측정' 입니다 — 0% 가 아닙니다.")
-        if n_non_ko:
+
+        if no_llm and n_non_ko:
             print(f"  ★ 비한국어 {n_non_ko}문항의 게이트 지표는 llm 모드와 비교할 수 없습니다.")
             print("    임계값은 질의 번역이 켜진 상태로 보정돼 있는데 --no-llm 은 번역도 끕니다.")
             print("    회귀는 `--lang ko` 로 보거나 llm 모드로 재실행하세요.")
+        elif not no_llm:
+            # ★ 위의 `--no-llm` 경고가 여기에는 **해당하지 않는다.** 정규화(③)를
+            #   실제로 돌렸으므로 검색어가 llm 모드와 같고, 따라서 Recall@5 는
+            #   llm 모드 수치와 **직접 비교할 수 있다** — 임계값에도 의존하지
+            #   않는다(계획서 §5).
+            print("  ★ 정규화(③)는 실제로 돌았습니다 — "
+                  "Recall@5 는 llm 모드와 직접 비교 가능합니다.")
+            print("    이 모드가 재는 것은 그것 하나입니다. 폴백·계층 지표는 보지 마세요.")
 
     print_report(report)
 
