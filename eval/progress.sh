@@ -6,8 +6,12 @@
 # 다른 세션·다른 기계에서는 그냥 동작하지 않았다.
 #   PARTIAL=... ./eval/progress.sh   으로 언제든 덮어쓸 수 있다.
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-P="${PARTIAL:-$REPO/eval/reports/exp_008_partial.jsonl}"
-TOTAL="${TOTAL:-160}"
+# ★ 기본값은 **지금 돌고 있는 실행**을 가리켜야 쓸모가 있다. 리포트 명명이
+#   `exp_NNN_{model}_{device}` 로 바뀐 뒤(계획서 §7.10) 이 값이 실제 파일명과
+#   어긋나 있었다 — 기본값으로 돌리면 조용히 "0/160" 만 보여 준다.
+P="${PARTIAL:-$REPO/eval/reports/exp_009_qwen35-4b-textonly_mps_partial.jsonl}"
+# 언어 필터를 걸면 총 문항이 달라진다 (vi 41 · en 42 · ko 77 · 전체 160).
+TOTAL="${TOTAL:-41}"
 
 show() {
   [ -f "$P" ] || { echo "아직 시작 전 (파일 없음)"; return; }
