@@ -1164,3 +1164,201 @@ implemented_yet` 에서 똑같은 짓을 반복했다(CPU 로 4B 를 올리려�
   다음 실행의 기록으로 가린다.
 - en·vi 의 **무근거 표본이 2건·1건뿐**이다. 위 100% 는 신뢰 구간이 없는
   값이므로 두 임계값은 잠정이다. 골든셋 160문항 확장 때 언어별로 채운다.
+
+---
+
+## 2026-08-19 — 개발 환경을 Windows/CUDA 로 옮기고 MPS 를 걷어냈다
+
+### 실측값
+
+- **RTX 5060 Ti (sm_120 Blackwell, VRAM 15.9GB)** — torch 2.13.0+cu132.
+  워밍업 후 4096³ matmul: **fp32 17.3 / bf16 60.9 TFLOP/s**. SDPA bf16 정상.
+  `torch.cuda.get_arch_list()` 에 `sm_120` 포함 — "no kernel image" 함정 없음.
+- **fastembed(e5-large) GPU 전환 효과 32.4배** — 32건 임베딩 GPU 88ms / CPU 2,857ms.
+  MiniLM 64건은 GPU 43ms / CPU 664ms (15.4배).
+  GPU·CPU 결과 일치도 cosine ≥ 0.99999985, maxdiff 1.8e-03 — 검색에 영향 없는 수준.
+- **torch 와 onnxruntime CUDA EP 가 한 프로세스에서 공존한다.** import 순서 무관.
+  cuDNN 이 두 벌(torch 9.20 / nvidia-cudnn-cu13 9.24) 깔려도 충돌하지 않았다.
+
+### 결정과 근거
+
+- **개발 장치를 MPS → CUDA 로 옮기고 MPS 경로를 제거했다 → [ADR-005](adr/ADR-005-cuda-only-dev.md).**
+  ADR-004 의 "개발 mps / 배포 cuda" 이중 경로를 대체한다. dtype 이 개발·판정·배포
+  모두 bf16 으로 통일돼, `report_charts` 가드가 막던 비교 불능 구간이 사라진다.
+  **단 VRAM 은 18GB → 16GB 로 오히려 줄어** 1차 3종 중 Qwen3.5-4B 만 bf16 으로
+  올라간다. 3종 전량 비교는 int8 실측 결과에 달려 있다.
+- **int8 이월 사유가 해소됐다.** 8.7배 지연은 MPS 에 int8 행렬곱 커널이 없어서였다.
+  CUDA 에서 재측정하면 4.87GB × 3 으로 3종을 모두 올릴 수 있다.
+
+### 막힌 지점과 해결
+
+- **`chroma-hnswlib 0.7.6` 이 Windows+py3.12 에서 소스 빌드로 떨어진다.** cp37~cp311
+  win_amd64 휠만 배포되고 **cp312 는 없다**(Linux/macOS 는 있다). chromadb 0.5.20~1.1
+  이 이 버전을 하드핀해 우회 불가. 빌드에는 pybind11 3.x 가 붙어 MSVC 2019+ 를
+  요구하는데 이 PC 엔 MSVC 14.16(VS2017)뿐이었다 →
+  **VS18 BuildTools 에 C++ 워크로드 추가(MSVC 14.51)로 해결.** Docker 는 무관하다.
+- **`ort.get_available_providers()` 가 거짓말을 한다.** `onnxruntime-gpu` 설치 후
+  `CUDAExecutionProvider` 를 보고하지만 **실제 세션 생성은 실패**하고 조용히 CPU 로
+  떨어진다. 원인은 nvidia-* pip 패키지의 DLL(`cublasLt64_13.dll` 등)이
+  `site-packages/nvidia/cu13/bin/x86_64/` 에 있어 Windows 검색 경로에 없기 때문.
+  **`onnxruntime.preload_dlls()` 를 세션 생성 전에 불러야 한다.**
+  providers 문자열만 보고 "GPU 붙었다"고 판단하면 32배를 그냥 잃는다.
+- **양자화 ONNX 그래프가 sm_120 에서 깨진다.** `bge-small-en-v1.5`(`model_optimized.onnx`)
+  의 fused `Attention` 이 cuDNN Flash Attention 그래프 빌드에 실패한다.
+  `ORT_DISABLE_*_FLASH_ATTENTION` 우회도 안 먹는다. **비양자화(`model.onnx`)는 정상**이라
+  실사용 모델(e5-large)은 무관하지만, 리랭커를 ONNX 양자화본으로 켜면 같은 벽에 부딪힌다.
+  AWS(g5=sm_86 / g6=sm_89)에서는 재현되지 않을 것으로 본다.
+
+### 기획서와 어긋난 지점
+
+- **`requirements.txt` 가 Windows 에서 CUDA torch 를 재현하지 못한다.** PyPI 의
+  win_amd64 휠(116MB)은 CPU 전용이고, 현재 깔린 `+cu132` 는 PyTorch 인덱스에서
+  수동 설치한 것이다. Linux 휠은 `nvidia-cu13` 을 자동 동반해 문제가 없다.
+  ADR-005 가 "CUDA 실측으로만 판정한다"고 못박은 이상 **팀원이 조용히 CPU torch 로
+  측정하는 사고**가 가능하다 → 일단 requirements.txt 에 경고와 인덱스 URL 명시,
+  근본 해결은 `requirements-base / -cpu / -gpu` 분할(후속).
+- **pip 26.2 가 문서가 가정한 버전을 백트래킹으로 낮췄다.** requirements.txt 주석은
+  "충돌 경고가 뜨지만 실동작 정상"이라고 적혀 있으나, 실제로는 경고 대신 더 낮은
+  버전이 선택됐다: **chromadb 0.5.23 → 0.5.20** (0.5.23 의 `tokenizers<=0.20.3` 이
+  transformers 5.15 와 충돌), **xgrammar 0.2.4 → 0.2.3** (0.2.4 의 `transformers<5`).
+  `pip check` 는 깨끗하다. 순수 파이썬 핀이라 Docker 에서도 같게 해소된다 —
+  환경이 깨진 게 아니라 **주석이 낡았다.** 단 Recall@5 93.9% 는 0.5.23 기준 수치라
+  0.5.20 에서 재확인이 필요하다(`--no-generation`, 17분).
+- **`fastembed~=0.4` 가 0.8.0 으로 해소됐다.** `cuda` 기본값이 `Device.AUTO` 로 바뀌어
+  **CUDA EP 가 살아 있으면 코드 수정 없이 GPU 를 잡는다.** 편리하지만 로컬만 GPU 가
+  되어 Docker(CPU)와 갈라진다는 뜻이기도 하다.
+- **weasyprint 가 Windows 에서 임포트 실패한다**(`libgobject-2.0-0` 없음). GTK 런타임이
+  따로 필요하다. M1 에서 쓰지 않으므로 방치하되, Dockerfile 은 이미 apt 로 해결돼 있다.
+
+---
+
+## 2026-08-19 (이어서) — 문법 생성이 스스로 멈추지 않고 있었다
+
+ADR-005 후속 4건을 진행하다 성능 버그를 찾았다. 앞 절의 장치 전환이 없었으면
+드러나지 않았을 종류다 — MPS 에서는 전량 채점 자체가 불가능해 이 구간을 볼 수 없었다.
+
+### 실측값
+
+- **XGrammar 사용 시 생성이 `max_new_tokens` 까지 스텝을 다 돈다.** 문법이 JSON 을
+  닫아도 transformers 의 EOS 정지가 걸리지 않는다. 남는 스텝은 전부 EOS 이고
+  `skip_special_tokens=True` 가 지우므로 **출력은 정상으로 보인다.**
+
+      문법  cap    소요      실제스텝   그중 EOS   보이는 토큰
+      없음  2048   12.1초        72          1        70   ← 정상 종료
+      있음   512   79.1초       512        198       309
+      있음  2048  305.6초      2048      1,734       309   ← 85% 낭비
+
+  `GrammarMatcher.is_terminated()` 를 보는 `StoppingCriteria` 로 고쳤다:
+  **cap 512 → 50.3초 / cap 2048 → 51.0초, 둘 다 316스텝, 출력 sha1 동일.**
+  앱 경로(bench_local_speed) 기준 **⑦ 151.6초 → 31.7초, 체감 153.2 → 35.2초.**
+- **문법 자체의 오버헤드는 4% 뿐이다** (cap 64 에서 12.58 → 12.05 tok/s).
+  느렸던 것은 문법이 아니라 **멈추지 않는 것**이었다. 두 번 헛다리를 짚었다 —
+  처음엔 "2048 토큰을 다 생성한다"(→ 실제 생성은 69토큰), 다음엔 "문법 커널이
+  느리다"(→ 4%). **추론 말고 스텝 수를 직접 셌을 때 원인이 나왔다.**
+- **int8 은 장치 아티팩트가 맞았다.** MPS 8.7배 → CUDA 1.18배(③ 1.7 vs 2.0초).
+  다만 int8 은 cuda 에서도 ⑦ 이 1.32배 느리다 — **속도 대책이 아니라 용량 대책**이다.
+- textonly 8.43GB / int8 4.87GB — 2026-08-18 MPS 기록과 **디스크 수치는 정확히 일치**.
+  장치와 무관한 값이었음이 확인됐다.
+- 모델 적재 VRAM 9,960 MiB (textonly bf16) — 16GB 에 예상대로 들어간다.
+
+### 막힌 지점과 해결
+
+- **XGrammar 의 CUDA 경로가 Triton 을 요구한다.** 없으면 생성 스레드에서
+  `ImportError: Triton is not installed` 가 나고 **본 스레드는 그대로 멈춘다** —
+  에러 메시지 없이 10분 행으로 관측됐다. Linux 는 torch 가 triton 을 자동 동반하지만
+  PyPI `triton` 에 Windows 휠이 없다 → `triton-windows` 로 해결.
+  이렇게 하면 Windows 도 Linux 와 **같은 triton 백엔드**를 타 ADR-005 의 "같은
+  코드 경로"가 유지된다.
+- **`torchao` 가 선언돼 있지 않았다.** `export_local_model.py --stage int8` 이 쓰는데
+  requirements 에 없어 실행 시점에 `ModuleNotFoundError` 로 처음 발견됐다.
+  int8 경로가 이 환경에서 한 번도 돈 적이 없다는 뜻이다.
+- **`cache_implementation="dynamic"` 은 효과가 없었다** (276초, 기본값과 동일).
+  KV 캐시 할당 가설은 틀렸다.
+
+### 기획서와 어긋난 지점
+
+- **`corpus/chunks.jsonl` 이 71청크다.** requirements 주석과 planner 는 "~1,200 청크"를
+  전제한다. `corpus/processed/` 22개 문서에서 나온 값이라 파이프라인은 정상이고,
+  **문서 쪽 수치가 실제와 다르다.** Recall@5 는 이 코퍼스 기준이다.
+- **requirements 3분할** — `requirements-base / requirements(CPU) / requirements-gpu`.
+  Dockerfile 이 `-r requirements-base.txt` 를 못 찾아 죽지 않도록 두 파일을 COPY 하게
+  함께 고쳤다.
+
+### 골든셋 160문항 전량 채점 완주 (exp_011)
+
+ADR-004 가 "MPS 에서 4~6시간이라 사실상 불가능 → AWS GPU 가 있어야 판정된다"며
+미뤄 둔 결정 게이트를 **로컬 CUDA 에서 80분에 완주했다.**
+
+- **통과**: 인용 100%(60/60) · 숫자 100%(60/60) · 언어일치 100%(60/60) ·
+  금지표현 0건 · Recall@5 93.5%(86/92, 목표 92)
+- **미달**: 과잉폴백 43.5%(목표 8) · 폴백사유일치 60.3% · 계층일치 71.7% ·
+  폴백정확 88.2% · 사실포함 85.1% · 지연 p50 23.3초(목표 6초)
+
+**환각 방어는 만점인데 "답할 수 있는데 답하지 않는" 쪽이 전부 무너졌다.**
+과잉폴백 40건 = `unsupported_number` 18 · `upstream_error` 12 ·
+`language_mismatch` 6 · `low_confidence` 4.
+
+`upstream_error` 12건은 모델 품질이 아니라 **JSON 잘림 버그**다. 걷어내면
+과잉폴백 43.5% → **30.4%**, 지연 p95 149초 → **54초**.
+
+⚠ **exp_009(MPS)와 섞지 않는다.** 같은 vi 41문항인데 과잉폴백이
+66.7%(mps/fp16) → 71.4%(cuda/bf16) 로 움직였다. dtype 이 달라 생성이 갈린 것이고,
+`report_charts.require_same_device()` 가 막으라고 있는 혼입이다.
+**exp_011 이 새 기준선이다.**
+
+### 과잉 폴백 43.5% → 25.0% (exp_012) — 두 버킷이 한 원인이었다
+
+exp_011 의 최대 미달 항목을 잡았다. `upstream_error` 와 `unsupported_number` 는
+따로 보였지만 **뿌리가 같았다** — 모델이 `numbers_used` 에 날짜를 `2025`,`3`,`21` 로
+쪼개 넣다가 같은 값을 무한 반복하는 것.
+
+### 실측값
+
+| 지표 | exp_011 | exp_012 |
+|---|---|---|
+| **과잉 폴백** | 43.5% (40/92) | **25.0% (23/92)** |
+| 정상 답변 | 60건 | **79건** (+19) |
+| upstream_error | 13 | **1** (−12) |
+| unsupported_number | 20 | **12** (−8) |
+| 지연 p95 | 149초 | **45초** |
+| 전량 소요 | 91분 | **54분** |
+| 인용률·숫자정확도·금지표현 | 100 / 100 / 0 | **동일 (가드 유지)** |
+| Recall@5 | 93.5% | 동일 |
+| 폴백 정확도 | 88.2% | 85.3% (−2.9) |
+
+언어별 과잉 폴백: **ko 30.6→8.2%(목표 8% 달성) · en 45.5→22.7% · vi 71.4→66.7%.**
+
+### 막힌 지점과 해결
+
+- **`numbers_used` 배열 폭주.** 스키마에 상한이 없어 모델이 같은 값을 무한 반복하다
+  `max_new_tokens` 를 소진 → JSON 잘림 → 파싱 실패 → `upstream_error`.
+  raw 를 떠보니 **답변 본문은 정상적인 A 등급**인데 뒤쪽 배열 하나가 폭주해 통째로
+  버려지고 있었다. XGrammar 가 `maxItems` 를 문법에서 강제하는 것을 먼저 확인하고
+  (`maxItems=3` 에서 4번째 거부) `numbers_used max_length=24`,
+  `citations max_length=12` 를 넣었다. 반복 자체는 남지만 24개에서 닫힌다.
+- **숫자 대조가 보여준 숫자를 차단.** 근거의 `100만원` 은 `1000000:krw` 로만 남아
+  모델이 적은 맨숫자 `100` 과 만나지 못한다. 차단 20건을 근거 원문과 대조하니
+  **18건이 오탐**이고 진짜는 `1350`(없는 전화번호)·`100,000` 둘뿐이었다.
+  `numeral_supported` 에 `ctx.block`(모델에게 실제로 보여준 텍스트) 대조를 추가.
+  ★ **경계 조건이 핵심이다** — 단순 부분문자열이면 근거의 `1000000` 안에서 거의
+  모든 숫자가 매칭돼 가드가 무력해진다. 독립된 수 토큰으로만 인정한다.
+  측정: 12/20 해소, **정탐 누출 0**.
+
+### 남은 문제 — vi 는 코드로 못 고친다
+
+vi 과잉 폴백 66.7% 의 최대 원인은 `language_mismatch` 7건인데, 재현해 보니
+**모델이 실제로 한국어로 답한다**(한글 비율 0.68~0.90). 판정기 오탐이 아니다.
+
+    Q-LIMIT-023  "한도제한계좌는 금융거래 목적을 확인할 수 없는…"  한글 86%
+    Q-STAY-020   "대한민국에 입국한 날부터 90일을 초과하여…"       한글 90%
+
+프롬프트는 이미 "반드시 {lang_name}로만 답변합니다"라고 명시한다. **Qwen3.5-4B 의
+다국어 한계**이고, ADR-004 가 Sailor2-8B(SEA 특화, vi 포함)를 후보에 둔 이유가
+여기서 확인됐다. 다만 bf16 ~17GB 라 16GB 에 안 들어간다 — int8 이 그 후보를 재기
+위한 전제다.
+
+### 방법에 대한 기록
+
+원인을 두 번 헛짚었다. "cap 을 다 태운다"(→ 실제 생성은 69토큰), "문법 커널이
+느리다"(→ 오버헤드 4%). **추측을 멈추고 raw 출력을 실제로 뜨고 스텝 수를 직접
+세었을 때** 원인이 나왔다. 잘린 출력을 눈으로 본 것이 결정적이었다.
