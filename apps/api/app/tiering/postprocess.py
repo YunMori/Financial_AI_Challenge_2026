@@ -90,8 +90,13 @@ def finalize(answer: LLMAnswer, ctx: EvidenceContext, lang: Lang) -> FinalRespon
 
     # ── 3. 숫자 대조 ★ ──────────────────────────────────────────────
     # 금융 안내의 치명적 오류는 대부분 숫자에서 나온다.
+    #
+    # ★ `ctx.block` 을 함께 넘긴다 — **모델에게 실제로 보여준 텍스트**다.
+    #   정규형 집합(`ctx.numerals`)만으로 보면 근거의 "100만원"(→`1000000:krw`)과
+    #   모델이 적은 맨숫자 "100" 이 만나지 못해, 보여준 숫자를 차단한다.
+    #   exp_011 에서 차단 20건 중 18건이 이 오탐이었다(2026-08-19).
     if unsupported := [t for t in answer.numbers_used
-                       if not numeral_supported(t, ctx.numerals)]:
+                       if not numeral_supported(t, ctx.numerals, ctx.block)]:
         log.info("차단: 근거에 없는 수치 %s", unsupported)
         return make_fallback(FallbackReason.UNSUPPORTED_NUMBER, lang, ctx.refs,
                              unsupported_numbers=unsupported)

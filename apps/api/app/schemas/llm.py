@@ -38,17 +38,40 @@ class LLMAnswer(BaseModel):
     tier: Tier = Field(
         description="모델이 판단한 계층. 최종값이 아니며 후처리에서 강등될 수 있다."
     )
+    # 근거는 `context_top_n`(=5) 개만 주므로 정상 답변은 그 이하다. 12 는 넉넉한
+    # 상한이면서 `numbers_used` 와 같은 폭주(같은 ref 반복)를 문법에서 막는다.
     citations: list[Citation] = Field(
         default_factory=list,
+        max_length=12,
         description="사용한 근거. 비어 있으면 후처리가 응답을 차단한다.",
     )
     numbers_used: list[str] = Field(
         default_factory=list,
+        max_length=24,
         description=(
             "답변에 등장시킨 모든 수치·금액·날짜·기간. 모델이 스스로 나열하게 하는 것이 "
-            "숫자 대조 검사의 입력이다. 누락되면 검사가 통과는 하되 아무것도 잡지 못한다."
+            "숫자 대조 검사의 입력이다. 누락되면 검사가 통과는 하되 아무것도 잡지 못한다. "
+            "날짜는 쪼개지 말고 한 항목으로 적는다 (`2025-03-21` — `2025`,`3`,`21` 이 아니다). "
+            "같은 값을 여러 번 적지 않는다."
         ),
     )
+    # ★ `max_length` 가 **문법 상한**이 된다 (JSON Schema `maxItems` → XGrammar).
+    #   없으면 배열이 무한 허용되고, 모델이 같은 값을 반복하다 `max_new_tokens` 를
+    #   소진해 JSON 이 잘린다 → 파싱 실패 → `upstream_error` 폴백이다.
+    #
+    #   실측 (2026-08-19 · exp_011 · Qwen3.5-4B):
+    #     Q-OPEN-004  numbers_used 가 "2025","3","21" 을 무한 반복 (raw 3,490자에서 잘림)
+    #     Q-OPEN-009  numbers_used 가 "3,613" 을 무한 반복 (raw 3,131자에서 잘림)
+    #   **두 문항 모두 `answer` 본문은 정상적인 A 등급 답변이었다.** 본문이 멀쩡한데
+    #   뒤쪽 배열 하나가 폭주해 통째로 버려지고 있었다 — 160문항 중 13건(8.1%).
+    #
+    #   상한을 24 로 둔 근거: 정상 답변의 numbers_used 는 통상 5~15개다. 24 는
+    #   여유가 있으면서 폭주는 막는다. **자르는 것이 목적이 아니라 멈추게 하는 것이
+    #   목적이다** — 문법이 닫으면 정지 조건(`local_client._grammar_finished_criteria`)
+    #   이 그 즉시 생성을 끝낸다.
+    #
+    #   ⚠ 상한에 걸려 실제 수치가 잘리면 숫자 대조가 그만큼 헐거워진다. 24 를 넘는
+    #   답변이 나오는지 리포트로 확인해야 한다 (아래 `citations` 도 같은 이유로 둔다).
     needs_confirmation: bool = Field(
         default=False,
         description="금융기관에 사전 확인이 필요한 내용 — 계층 B 강제 문구의 트리거",
