@@ -255,22 +255,64 @@ def extract_numerals(text: str) -> set[str]:
     return found
 
 
-def numeral_supported(token: str, evidence: set[str]) -> bool:
+def _appears_in_text(token: str, text: str) -> bool:
+    """`token` 이 근거 텍스트에 **눈에 보이는 형태로** 있는지.
+
+    정규형 비교(`evidence` 집합)는 단위 등가성(`100만원` ≡ `1,000,000원`)을 잡는
+    대신, **부분 표기를 놓친다.** 근거의 "100만원" 은 `1000000:krw` 로만 남으므로
+    모델이 `numbers_used` 에 맨숫자 `100` 을 적으면 매칭되지 않는다. 날짜도
+    `2024-05-02` → `20240502:date` 라서 `2024` 나 `5` 가 걸리지 않는다.
+
+    실측 (2026-08-19 · exp_011): 차단된 20건을 근거 원문과 대조하니 **`1350`(근거에
+    없는 전화번호)과 `100,000` 만 진짜였고 나머지는 전부 근거에 그대로 있었다.**
+
+    가드가 물어야 할 질문은 "정규형이 일치하는가"가 아니라 **"모델이 지어냈는가,
+    아니면 우리가 보여준 것인가"** 다. 그래서 다음 둘 중 하나면 인정한다.
+
+    1. 표기 그대로 등장 (`2024-05-02`, `May 10th` 처럼 구분자가 있는 형태)
+    2. 숫자열이 **독립된 수 토큰**으로 등장 — 앞뒤가 숫자가 아니어야 한다
+
+    ★ 2의 경계 조건이 핵심이다. 단순 부분문자열이면 근거의 `1000000` 안에서
+      `1350` 을 제외한 거의 모든 것이 매칭돼 가드가 무력해진다. 실제로 부분문자열
+      방식은 20건 중 12건을 "해소"했는데 그중에 정탐도 섞여 있었다.
+    """
+    if not text:
+        return False
+    if token in text:
+        return True
+    digits = re.sub(r"\D", "", token)
+    if not digits:
+        return False
+    # 자릿수 구분 쉼표·공백만 지우고 본다. 하이픈은 남긴다 — 날짜를 숫자열로
+    # 뭉개면 `2023-08-08` 이 `20230808` 이 되어 경계 판정이 어긋난다.
+    flat = re.sub(r"[,\s]", "", text)
+    return re.search(rf"(?<!\d){re.escape(digits)}(?!\d)", flat) is not None
+
+
+def numeral_supported(token: str, evidence: set[str], text: str = "") -> bool:
     """답변에 등장한 수치 표기가 근거에 실재하는지.
 
     파싱되지 않는 표기는 **지지된 것으로 본다.** 수치가 아닌 문자열
     (서류명 등)이 numbers_used 에 섞여 들어온 것을 근거 부족으로 오판하면
     정상 답변이 차단된다 — 거짓 폴백을 늘리는 쪽이 더 나쁘다.
+
+    `text` 는 모델에게 실제로 보여준 근거 블록(`EvidenceContext.block`)이다.
+    정규형 비교가 놓치는 부분 표기를 여기서 건진다 — `_appears_in_text` 참조.
+    비워 두면 정규형 비교만 하므로 예전 동작과 같다.
     """
     # 날짜는 해석이 여럿일 수 있다(일/월 순서). 하나라도 근거에 있으면 인정한다.
     if cands := _date_candidates(token):
-        return any(str(Numeral(float(c.replace("-", "")), "date")) in evidence for c in cands)
+        if any(str(Numeral(float(c.replace("-", "")), "date")) in evidence for c in cands):
+            return True
+        return _appears_in_text(token, text)
     n = parse_numeral(token)
     if n is None:
         return True
     if str(n) in evidence:
         return True
     # 단위 없는 표기는 어떤 단위로든 근거에 있으면 인정한다.
-    if not n.unit:
-        return any(e.split(":")[0] == str(Numeral(n.value, "")).split(":")[0] for e in evidence)
-    return False
+    if not n.unit and any(
+        e.split(":")[0] == str(Numeral(n.value, "")).split(":")[0] for e in evidence
+    ):
+        return True
+    return _appears_in_text(token, text)
