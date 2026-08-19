@@ -95,8 +95,9 @@ class Settings(BaseSettings):
     #   aisingapore/Qwen-SEA-LION-v4-4B-VL  ~8GB   Sailor2 가 이겼을 때만 (VL 주의)
     #   Qwen/Qwen3.5-9B                     ~19GB  1차 전원 미달 시 승격
     #
-    # 확정은 AWS GPU 실측 후 ADR-004. 지금 값은 **MPS 에 올릴 수 있는 유일한 후보**다
-    # (M3 Pro 18GB 에서 나머지는 메모리가 모자란다).
+    # 확정은 ADR-005. 지금 값은 **VRAM 16GB(RTX 5060 Ti)에 올릴 수 있는 유일한
+    # 후보**다 — gemma-4-e4b(~16GB)·Sailor2-8B(~17GB)는 bf16 으로 들어가지 않는다.
+    # 장치가 mps 에서 cuda 로 바뀌었어도 이 제약 자체는 그대로다(18GB → 16GB).
     #
     # ★ 이 값은 **로컬 경로도 받는다** (`from_pretrained` 가 그렇다).
     #   `Qwen3.5-4B` 는 이름과 달리 `Qwen3_5ForConditionalGeneration` 이라
@@ -113,13 +114,15 @@ class Settings(BaseSettings):
     #     이 죽어 있던 사고(커밋 64dc422)와 **같은 형태**다. 배포 경로가 정해질 때
     #     함께 다룬다.
     #
-    #   `--stage int8` 로 4.87GB 까지 줄지만 MPS 에서 8.7배 느려 이 장치에서는
-    #   판정할 수 없다 — AWS(CUDA)로 이월했다. 탈락이 아니다.
+    #   `--stage int8` 로 4.87GB 까지 준다. MPS 에서는 int8 행렬곱 커널이 없어
+    #   8.7배 느렸고 그래서 판정을 미뤘지만, **cuda 로 옮기면서 그 제약이
+    #   풀렸다** — 이제 실측으로 판정할 수 있다(ADR-005 의 후속 작업).
+    #   4.87GB 는 16GB 에 1차 3종을 모두 올릴 여지도 만든다.
     #   상세: docs/2026-08-18-model-slimming.md
     local_model: str = "Qwen/Qwen3.5-4B"
-    # 개발은 mps(M3 Pro), 배포는 cuda(AWS g5/g6). 자동 선택하되 강제할 수 있게 둔다 —
-    # 어느 장치로 돌았는지는 리포트에 남겨야 비교가 성립한다.
-    local_device: Literal["auto", "mps", "cuda", "cpu"] = "auto"
+    # cuda 단일 경로다(ADR-005). 자동 선택하되 강제할 수 있게 둔다 — 어느 장치로
+    # 돌았는지는 리포트에 남겨야 비교가 성립한다. cpu 는 등가성 검사 전용이다.
+    local_device: Literal["auto", "cuda", "cpu"] = "auto"
     local_dtype: Literal["auto", "float16", "bfloat16", "float32"] = "auto"
     # 생성 길이. API 경로의 llm_max_tokens 와 분리한다 — 로컬은 지연 특성이 달라
     # 같은 값을 쓸 이유가 없다.

@@ -23,14 +23,15 @@ class TestDeviceResolution:
         assert resolve_device("cuda") == "cuda"
 
     def test_auto_returns_a_real_device(self):
-        assert resolve_device("auto") in ("cuda", "mps", "cpu")
+        """cuda 단일 경로다(ADR-005). cpu 는 등가성 검사 전용 폴백이다."""
+        assert resolve_device("auto") in ("cuda", "cpu")
 
     @pytest.mark.parametrize(
         "device,expected",
-        [("cuda", "bfloat16"), ("mps", "float16"), ("cpu", "float32")],
+        [("cuda", "bfloat16"), ("cpu", "float32")],
     )
     def test_dtype_defaults_per_device(self, device, expected):
-        """mps 는 bfloat16 지원이 고르지 않아 float16, cpu 는 float16 이 오히려 느리다."""
+        """cuda 는 판정·배포와 같은 bf16, cpu 는 float16 이 오히려 느려 float32."""
         import torch
 
         assert resolve_dtype(device, "auto") is getattr(torch, expected)
@@ -38,7 +39,7 @@ class TestDeviceResolution:
     def test_explicit_dtype_wins(self):
         import torch
 
-        assert resolve_dtype("mps", "float32") is torch.float32
+        assert resolve_dtype("cuda", "float32") is torch.float32
 
 
 class TestLazyLoad:

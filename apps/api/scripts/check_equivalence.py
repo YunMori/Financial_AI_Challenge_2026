@@ -40,7 +40,8 @@ fp32 를 포기해도 이 검사는 성립한다. **두 모델을 같은 dtype �
 여기서는 dtype 이 공통이라 남는 차이가 곧 추출의 차이다. 오히려 bf16 은 실제
 CUDA 배포 dtype 이라 더 현실적이다.
 
-장치는 cpu 가 기본이다. MPS 커널 차이를 변수에서 뺀다.
+장치는 cpu 가 기본이다. 커널 차이를 변수에서 빼기 위해서다 — 추출 등가성을
+재는 자리라 판정 장치(cuda)와 일치시킬 이유가 없다.
 
 게이트
 ------
@@ -163,8 +164,8 @@ def main() -> int:
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--capture", choices=["original", "textonly"])
     ap.add_argument("--compare", action="store_true")
-    # cpu 가 기본이다 — MPS 커널 차이를 변수에서 뺀다.
-    ap.add_argument("--device", default="cpu", choices=["cpu", "mps", "cuda"])
+    # cpu 가 기본이다 — 커널 차이를 변수에서 뺀다(추출 등가성이 관심사다).
+    ap.add_argument("--device", default="cpu", choices=["cpu", "cuda"])
     args = ap.parse_args()
 
     if args.capture:
