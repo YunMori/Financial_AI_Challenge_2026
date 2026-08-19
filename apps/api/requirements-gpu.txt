@@ -1,0 +1,69 @@
+# K-Buddy API — CUDA 설치 (개발·판정, ADR-005)
+#
+# ★ **2단계다. 두 번째 줄을 빠뜨리면 임베딩이 조용히 CPU 로 돈다.**
+#
+#     pip install -r requirements-gpu.txt
+#     pip uninstall -y onnxruntime
+#
+#   왜 uninstall 이 필요한가: `onnxruntime-gpu` 는 배포판 **이름이 달라**
+#   chromadb·fastembed 의 `onnxruntime>=…` 요구를 만족하지 못한다. 그래서 pip 이
+#   CPU 빌드를 전이 의존으로 함께 깔고, 둘은 같은 `onnxruntime` 모듈을 점유해
+#   먼저 로드된 쪽이 이긴다. 지우고 나면 `pip check` 가 아래 두 줄을 보고하는데
+#   **정상이다** — 모듈은 onnxruntime-gpu 가 제공한다:
+#
+#       chromadb 0.5.20 requires onnxruntime, which is not installed.
+#       fastembed 0.8.0 requires onnxruntime, which is not installed.
+#
+# ── Windows 전용 선행 단계 ───────────────────────────────────────────
+#
+#   PyPI 의 torch win_amd64 휠(116MB)은 **CPU 전용**이다. 아래를 먼저 실행하지
+#   않으면 `torch~=2.13` 이 CPU 빌드로 해소되고, ADR-005 가 "CUDA 실측으로만
+#   판정한다"고 못박은 측정이 조용히 CPU 에서 돈다:
+#
+#       pip install torch~=2.13 --index-url https://download.pytorch.org/whl/cu132
+#
+#   (Linux 는 PyPI 휠이 nvidia-cu13 을 자동 동반하므로 이 단계가 필요 없다.)
+#
+# ── 설치 후 반드시 확인 ──────────────────────────────────────────────
+#
+#     python -c "import torch; print(torch.version.cuda, torch.cuda.is_available())"
+#     python -c "import onnxruntime as o; o.preload_dlls(); \
+#                import fastembed; m=fastembed.TextEmbedding('intfloat/multilingual-e5-large'); \
+#                print(m.model.model.get_providers())"
+#
+#   ⚠ **`ort.get_available_providers()` 로 확인하면 안 된다.** DLL 로딩이 실패한
+#     상태에서도 `CUDAExecutionProvider` 를 보고한다 — 실제로 세션을 만들어
+#     `session.get_providers()` 를 봐야 한다 (dev-log 2026-08-19).
+
+-r requirements-base.txt
+
+# ── 장치 의존 ────────────────────────────────────────────────────────
+# Windows 는 위 선행 단계에서 cu132 인덱스로 이미 깔려 있어야 한다.
+torch~=2.13
+
+# `[cuda,cudnn]` 엑스트라가 nvidia-* 런타임(cublas·cudnn·cufft·curand 등 ~1.5GB)을
+# 함께 받는다. 별도 CUDA Toolkit/cuDNN 설치가 필요 없다.
+#
+# ⚠ 이것만으로는 부족하다. nvidia-* 패키지의 DLL 이
+#   `site-packages/nvidia/cu13/bin/x86_64/` 에 들어가 Windows 검색 경로에 없어서
+#   **`onnxruntime.preload_dlls()` 를 세션 생성 전에 불러야 한다.**
+#   `app/rag/embed.py` 가 그렇게 하고 있다. 안 부르면 e5-large 32건 기준
+#   88ms → 2,857ms (32배) 손해를 에러 없이 본다.
+onnxruntime-gpu[cuda,cudnn]~=1.29
+
+# ★ **XGrammar 의 CUDA 경로 전제다.** `apply_token_bitmask_inplace` 는 logits 가
+#   cuda 면 backend="auto" → **triton** 으로 디스패치한다(`xgrammar/matcher.py:152`).
+#   Triton 이 없으면 생성 스레드에서 `ImportError: Triton is not installed` 가 나고,
+#   **본 스레드는 그대로 멈춘다** — 에러 메시지 없이 행으로 보인다(실측 2026-08-19).
+#   문법 제약은 이 백엔드의 성패가 걸린 지점이라 조용히 넘어갈 수 없다.
+#
+#   Linux 는 torch 가 `triton` 을 자동 동반하므로 이 줄이 필요 없다. PyPI 의
+#   `triton` 은 **Windows 휠을 배포하지 않아** 커뮤니티 포트를 쓴다 — 이렇게 하면
+#   Windows 도 Linux 와 **같은 triton 백엔드**를 타 ADR-005 의 "같은 코드 경로"가
+#   유지된다. (대안은 `torch_compile` 백엔드 강제인데, 그쪽이 오히려 경로를 가른다.)
+triton-windows~=3.7 ; sys_platform == "win32"
+
+# int8 양자화 산출물 생성용 — `scripts/export_local_model.py --stage int8`.
+# 런타임에는 불필요하지만 ADR-005 후속(int8 실측)이 이걸 쓴다. 선언이 없어
+# 실행 시점에 ModuleNotFoundError 로 처음 발견됐다(2026-08-19).
+torchao~=0.18
