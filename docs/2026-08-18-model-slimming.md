@@ -1,6 +1,9 @@
 # 로컬 생성 모델 슬림화 — 텍스트 전용 추출 + int8 양자화 · 2026-08-18
 
 - 상태: **① textonly 채택 · ② int8 은 AWS 로 이월** (2026-08-18 결정)
+- ⚠ **②의 이월 사유가 해소됐다 — [ADR-005](./adr/ADR-005-cuda-only-dev.md) (2026-08-19).**
+  int8 의 8.7배 지연은 MPS 에 int8 행렬곱 커널이 없어서였다. 개발 장치가 CUDA 로
+  바뀌어 **AWS 없이 로컬에서 재측정할 수 있다.** 아래 수치는 MPS 기록이다.
 - 관련: [2026-08-17 로컬 생성 노선 확정 및 모델 비교 계획](./2026-08-17-local-llm-plan.md) ·
   ADR-004(로컬 생성) · ADR-003(임베딩·메모리)
 - 산출물: `models/qwen35-4b-textonly` · `models/qwen35-4b-textonly-int8` (둘 다 gitignore)

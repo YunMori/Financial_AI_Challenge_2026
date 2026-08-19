@@ -14,8 +14,10 @@ model·device 를 리포트에 남기는 이유가 이것이고, 여기서도 �
 
 - `mode`(llm / no-llm)가 다르면 **선을 잇지 않는다.** `--no-llm` 은 번역(③)도 끄므로
   비한국어 게이트 지표가 llm 모드와 비교 불가다(run_eval 의 경고 참조).
-- `--compare` 는 입력 리포트의 `backend.device` 가 섞이면 **거부한다.** MPS 는 fp16,
-  CUDA 는 bf16 이라 그리디 디코딩이어도 생성이 갈린다.
+- `--compare` 는 입력 리포트의 `backend.device` 가 섞이면 **거부한다.** 장치가
+  다르면 dtype·커널이 달라 그리디 디코딩이어도 생성이 갈린다. ADR-005 로
+  개발·판정이 cuda 로 통일돼 새 리포트끼리는 이 사고가 나지 않지만,
+  **exp_008·009 의 mps 리포트가 남아 있어** 가드는 그대로 둔다.
 
 ★ 산점도만 `--partial` JSONL 을 받는다. 리포트 JSON 의 `failures` 에는 **실패 문항의
 top1 만** 들어 있어 분포를 그릴 수 없다. 문항별 `top1` 은 partial JSONL 에만 있다.
@@ -109,8 +111,10 @@ def _val(rep: dict, key: str):
 def require_same_device(reports: list[dict]) -> None:
     """입력이 같은 시스템에서 나왔는지 확인한다.
 
-    MPS(fp16)와 CUDA(bf16)는 그리디여도 토큰이 갈릴 수 있어 한 표에 못 놓는다.
-    backend 를 기록하지 않던 옛 리포트(exp_001~005)는 판정 대상에서 제외한다.
+    장치가 다르면 dtype·커널이 달라 그리디여도 토큰이 갈릴 수 있어 한 표에
+    못 놓는다 — 폐기된 mps 리포트(exp_008·009, fp16)와 cuda 리포트(bf16)가
+    대표적이다. backend 를 기록하지 않던 옛 리포트(exp_001~005)는 판정 대상에서
+    제외한다.
     """
     seen = {}
     for r in reports:
@@ -124,7 +128,9 @@ def require_same_device(reports: list[dict]) -> None:
         raise SystemExit(
             "backend/device 가 섞인 리포트는 함께 그릴 수 없습니다.\n"
             f"{lines}\n"
-            "MPS 는 fp16, CUDA 는 bf16 이라 생성이 갈립니다 — 따로 그리세요."
+            "장치가 다르면 dtype·커널이 달라 생성이 갈립니다 — 따로 그리세요.
+"
+            "(mps 리포트는 ADR-005 이전 기록입니다)"
         )
 
 

@@ -58,9 +58,15 @@ _PREFIXES = ("검색어:", "검색어 :", "Search terms:", "Keywords:", "답변:
 def resolve_device(preference: str = "auto") -> str:
     """실행 장치를 고른다.
 
-    개발은 mps(Apple Silicon), 배포는 cuda(AWS g5/g6). **같은 코드 경로**로
-    양쪽을 돌려야 "로컬에선 됐는데 배포에서는" 사고를 피할 수 있다 —
-    이 프로젝트가 컨테이너 기동 실패와 조판에서 이미 두 번 겪은 형태다.
+    **cuda 단일 경로다 (ADR-005).** mps 를 걷어내면서 개발 dtype 이 판정과 같은
+    bf16 이 되었다 — 장치가 갈려 그리디인데도 생성 토큰이 달라지던 문제가
+    사라진다. ADR-004 가 "CUDA bf16 실측으로만 판정한다"고 못박은 것을 개발
+    장치까지 끌어올린 것이다.
+
+    cpu 는 폴백이 아니라 **등가성 검사 전용**이다(`scripts/check_equivalence.py`).
+    자동 선택으로 cpu 가 잡히는 상황은 GPU 를 못 찾았다는 뜻이고, 4B 를 fp32 로
+    돌리면 사실상 멈춘 것처럼 보인다 — mps 가 있던 자리라 조용히 넘어가면
+    "왜 안 도는지" 를 찾는 데 시간을 버린다. 그래서 경고를 남긴다.
     """
     if preference != "auto":
         return preference
@@ -68,16 +74,18 @@ def resolve_device(preference: str = "auto") -> str:
 
     if torch.cuda.is_available():
         return "cuda"
-    if torch.backends.mps.is_available():
-        return "mps"
+    log.warning(
+        "CUDA 를 찾지 못해 cpu 로 떨어진다 — 로컬 생성은 사실상 쓸 수 없다. "
+        "등가성 검사가 목적이라면 LOCAL_DEVICE=cpu 로 명시하라."
+    )
     return "cpu"
 
 
 def resolve_dtype(device: str, preference: str = "auto") -> Any:
     """장치별 기본 dtype.
 
-    mps 는 bfloat16 지원이 고르지 않아 float16 을 쓴다. cpu 에서 float16 은
-    오히려 느리므로 float32 로 둔다.
+    cuda 는 bf16 — 개발·판정·배포가 모두 같은 dtype 이다(ADR-005). cpu 에서
+    float16 은 오히려 느리므로 float32 로 둔다.
     """
     import torch
 
@@ -85,8 +93,6 @@ def resolve_dtype(device: str, preference: str = "auto") -> Any:
         return getattr(torch, preference)
     if device == "cuda":
         return torch.bfloat16
-    if device == "mps":
-        return torch.float16
     return torch.float32
 
 
@@ -259,22 +265,19 @@ class LocalLLMClient:
         log.info("로컬 모델 로드: %s (device=%s dtype=%s)", self.model_name, self.device, dtype)
 
         self._tokenizer = AutoTokenizer.from_pretrained(self.model_name)
-        # ★ 로드 경로가 **장치마다 다르다.** 둘 다 실측으로 정해진 값이다
-        #   (2026-08-17, M3 Pro 18GB).
-        #
-        #   `.to(device)` 는 최대 메모리를 **두 배로** 만든다. from_pretrained 가
+        # ★ `.to(device)` 는 최대 메모리를 **두 배로** 만든다. from_pretrained 가
         #   먼저 CPU 에 전체를 올리고, `.to()` 가 대상 장치에 복사본을 만드는 동안
         #   둘이 함께 존재한다. 8B fp16(15.9GB)에서 순간 ~32GB 가 필요해 OOM 으로
-        #   죽었다 — 가중치 로드는 63초에 성공해 있었고 바로 그 다음이었다.
+        #   죽었다 — 가중치 로드는 63초에 성공해 있었고 바로 그 다음이었다
+        #   (2026-08-17 실측).
         #
         #   `device_map` 은 accelerate 가 샤드 단위로 대상 장치에 바로 올려 그
-        #   두 배를 없앤다. **그런데 MPS 에서는 세그폴트(SIGSEGV)가 난다** — 로드
-        #   도중 조용히 죽고 파이썬 예외가 없어 원인을 찾기 어렵다. 4B 로도 재현된다.
+        #   두 배를 없앤다. cuda 에서만 쓴다 — cpu 는 옮길 대상이 없어 의미가 없다.
         #
-        #   그래서 cuda 만 device_map 을 쓴다. 최대 메모리가 문제가 되는 곳도
-        #   거기다 — 24GB GPU 에 9B(~19GB)를 `.to()` 로 올리면 38GB 가 필요해
-        #   똑같이 죽는다. mps 는 8B 가 애초에 안 들어가므로 두 배를 감수해도 잃는
-        #   것이 없다.
+        #   ★ VRAM 16GB(RTX 5060 Ti)에서는 이 두 배가 곧 상한이다. `.to()` 경로로는
+        #     4B bf16(~8.4GB)조차 순간 ~17GB 를 요구해 들어가지 않는다 — 즉
+        #     device_map 은 최적화가 아니라 **이 장치에서 4B 를 올리는 전제**다.
+        #     ADR-005 의 VRAM 제약 참조.
         kwargs = {"dtype": dtype}
         if self.device == "cuda":
             kwargs["device_map"] = self.device
@@ -402,6 +405,24 @@ class LocalLLMClient:
             enc = self._tokenizer.apply_chat_template(messages, **kw)
         return enc.to(self.device)
 
+    @staticmethod
+    def _grammar_finished_criteria(processor):
+        """문법이 완성되면 생성을 멈추는 정지 조건.
+
+        XGrammar 의 `GrammarMatcher` 는 문법이 닫히면 `is_terminated()` 가 참이 된다.
+        그 시점 이후의 스텝은 결과에 기여하지 않는다 — `_generate_stream` 의 주석에
+        실측이 있다.
+        """
+        from transformers import StoppingCriteria, StoppingCriteriaList
+
+        class _GrammarFinished(StoppingCriteria):
+            def __call__(self, input_ids, scores, **kwargs) -> bool:
+                matchers = processor.matchers
+                # 첫 스텝에는 matcher 가 아직 없다 (LogitsProcessor 가 지연 생성한다).
+                return bool(matchers) and all(m.is_terminated() for m in matchers)
+
+        return StoppingCriteriaList([_GrammarFinished()])
+
     def _generate_stream(self, system: str, user: str):
         """문법 제약 스트리밍 생성 (동기 제너레이터)."""
         from transformers import TextIteratorStreamer
@@ -421,12 +442,31 @@ class LocalLLMClient:
 
         from app.config import get_settings
 
+        # ★ **문법을 쓰면 생성이 스스로 멈추지 않는다.** 문법이 JSON 을 닫은 뒤에도
+        #   transformers 의 EOS 정지가 걸리지 않아 `max_new_tokens` 까지 스텝을 계속
+        #   돈다. 남는 스텝은 전부 EOS 를 뱉고, `skip_special_tokens=True` 가 그것을
+        #   지우므로 **출력은 정상으로 보인다** — 조용히 시간만 태우는 형태다.
+        #
+        #   실측 (2026-08-19 · RTX 5060 Ti · qwen35-4b-textonly · 같은 프롬프트):
+        #
+        #       cap    정지조건 없음        정지조건 있음      보이는 출력
+        #       512     79.1초 / 512스텝    50.3초 / 316스텝   동일 (sha1 일치)
+        #      2048    305.6초 /2048스텝    51.0초 / 316스텝   동일 (sha1 일치)
+        #
+        #   cap=2048 에서 스텝의 85%(1,734/2,048)가 EOS 였다. 정지 조건을 걸면
+        #   **6배**가 회수되고 결과는 바이트 단위로 같다. 문법 없이 생성하면
+        #   72스텝에서 정상적으로 멈추므로, 이것은 문법 경로에서만 나는 문제다.
+        #
+        #   `local_max_new_tokens` 를 낮추는 것으로는 고칠 수 없다 — 잘림 위험만
+        #   생기고(§config 의 1024 잘림 사고), 비용은 cap 에 그대로 비례한다.
+        processor = LogitsProcessor(self.answer_grammar)
         kwargs = dict(
             **enc,
             max_new_tokens=get_settings().local_max_new_tokens,
             do_sample=False,
             pad_token_id=self._tokenizer.eos_token_id,
-            logits_processor=[LogitsProcessor(self.answer_grammar)],
+            logits_processor=[processor],
+            stopping_criteria=self._grammar_finished_criteria(processor),
             streamer=text_streamer,
         )
         t = threading.Thread(target=self._model.generate, kwargs=kwargs, daemon=True)

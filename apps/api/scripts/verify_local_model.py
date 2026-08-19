@@ -73,10 +73,10 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--model", required=True, help="HF 리포 ID")
-    ap.add_argument("--device", default="auto", choices=["auto", "mps", "cuda", "cpu"])
-    # 배선 검증은 **품질 측정이 아니다.** Gemma 계열은 bf16 학습이라 MPS 기본값인
-    # fp16 으로 재면 품질에 dtype 아티팩트가 섞이는데, "로드되는가 · 문법이 먹는가"
-    # 만 볼 때는 dtype 을 명시해 그 변수를 아예 뺄 수 있다.
+    ap.add_argument("--device", default="auto", choices=["auto", "cuda", "cpu"])
+    # 배선 검증은 **품질 측정이 아니다.** cuda 기본값이 bf16 이라 Gemma 계열의
+    # 학습 dtype 과 이미 맞지만(mps/fp16 시절의 아티팩트 걱정은 사라졌다),
+    # dtype 을 바꿔 가며 재현할 때를 위해 명시 경로는 남겨 둔다.
     ap.add_argument("--dtype", default="auto",
                     choices=["auto", "float16", "bfloat16", "float32"])
     ap.add_argument("--dry-run", action="store_true",
