@@ -45,8 +45,27 @@ class FastEmbedBackend:
     """ONNX 기반. torch 를 끌어오지 않아 이미지가 가볍다."""
 
     def __init__(self, model_name: str) -> None:
+        # ★ onnxruntime-gpu 는 nvidia-* pip 패키지의 CUDA DLL 을 Windows 검색
+        #   경로에 자동 등록하지 않는다(`site-packages/nvidia/cu13/bin/x86_64/`).
+        #   이걸 부르지 않으면 CUDAExecutionProvider 생성이 실패하고 **에러 없이
+        #   CPU 로 떨어진다** — e5-large 32건 기준 88ms → 2,857ms (32배).
+        #
+        #   ⚠ `ort.get_available_providers()` 는 이 상태에서도 CUDAExecutionProvider
+        #     를 보고한다. providers 문자열만 보고 판단하면 안 된다 — 실제로 세션을
+        #     만들어 `session.get_providers()` 로 확인해야 한다 (dev-log 2026-08-19).
+        #
+        #   CPU 전용 onnxruntime(Docker)에는 없거나 무의미하므로 실패를 삼킨다.
+        try:
+            import onnxruntime
+
+            onnxruntime.preload_dlls()
+        except Exception:  # pragma: no cover - 장치·빌드에 따라 갈린다
+            pass
+
         from fastembed import TextEmbedding
 
+        # providers 를 넘기지 않는다. fastembed 0.8 의 `cuda=Device.AUTO` 기본값이
+        # CUDA EP 가 살아 있으면 잡고 없으면 CPU 로 간다 — 장치별 분기가 필요 없다.
         self._model = TextEmbedding(model_name=model_name)
         self._prefix = _needs_e5_prefix(model_name)
         self.model_name = model_name

@@ -1,0 +1,84 @@
+# K-Buddy API — 공통 의존성 (Python 3.12)
+#
+# planner 는 3.11 을 명시했으나, 로컬과 Docker 핀을 일치시켜 "로컬에선 됐는데
+# 배포에서 안 되는" 사고를 제거한다. 휠 호환은 dev-log 2026-08-11 참조.
+#
+# ★ **이 파일을 직접 설치하지 않는다.** torch 와 onnxruntime 이 빠져 있다 —
+#   둘은 장치에 따라 배포판이 갈려서 아래 둘 중 하나를 고른다:
+#
+#       pip install -r requirements.txt        # CPU — Docker · CI · 로컬 생성 미사용
+#       pip install -r requirements-gpu.txt    # CUDA — 개발·판정 (ADR-005)
+#
+#   왜 나눴는가: `onnxruntime` 과 `onnxruntime-gpu` 는 같은 `onnxruntime` 모듈을
+#   점유해 **공존할 수 없다.** 한 파일에 둘 다 넣는 방식이 성립하지 않는다.
+#   torch 도 Windows 에서는 PyPI 휠이 CPU 전용이라 인덱스를 갈라야 한다.
+
+# ── 웹 ───────────────────────────────────────────────────────────────
+fastapi~=0.115
+uvicorn[standard]~=0.32
+pydantic~=2.9
+pydantic-settings~=2.6
+slowapi~=0.1.9              # IP당 분 20회 (planner §9.1)
+httpx~=0.27
+
+# ── LLM ──────────────────────────────────────────────────────────────
+anthropic~=0.69             # 생성(sonnet-5) + 질의 정규화(haiku-4.5)
+
+# ── 검색 ─────────────────────────────────────────────────────────────
+chromadb~=0.5.20            # 로컬 persistent, 별도 서버 불필요
+rank-bm25~=0.2.2
+kiwipiepy~=0.18             # 한국어 형태소 — 공백 분리 시 "한도제한계좌" 매칭 실패
+fastembed~=0.4              # ONNX 임베딩. 문서·쿼리에 같은 모델/정밀도 사용
+
+# ⚠ **pip 이 문서의 가정보다 낮은 버전을 고른다** (실측 2026-08-19, pip 26.2).
+#   과거 주석은 "충돌 경고가 뜨지만 실동작 정상"이라고 적었으나, 최신 resolver 는
+#   경고 대신 **백트래킹으로 더 낮은 버전을 선택**한다:
+#
+#       chromadb  0.5.23 → 0.5.20   (0.5.23 의 `tokenizers<=0.20.3` vs transformers 5.15)
+#       xgrammar  0.2.4  → 0.2.3    (0.2.4 의 `transformers<5`)
+#
+#   `pip check` 는 깨끗하다. 순수 파이썬 핀이라 Docker 도 같게 해소된다 —
+#   환경이 깨진 게 아니라 **주석이 낡았던 것**이다. 단 Recall@5 93.9% 는
+#   chromadb 0.5.23 기준 수치이므로 0.5.20 재확인이 필요하다.
+
+# ── 코퍼스 수집 (corpus/scripts) ─────────────────────────────────────
+trafilatura~=1.12           # HTML 본문 추출
+pdfplumber~=0.11            # PDF + extract_table()
+python-frontmatter~=1.1
+pyyaml~=6.0
+
+# ── 문서 생성 ────────────────────────────────────────────────────────
+# M1 에서 사용하지 않지만 지금 고정한다. Docker 시스템 의존성(libpango/libcairo)을
+# 6주 차에 처음 마주치면 늦는다 — planner §15.4 가 지적한 최빈 배포 사고.
+#
+# ⚠ Windows 에서는 `import weasyprint` 가 실패하는 것이 **정상**이다
+#   (`libgobject-2.0-0` 없음 — GTK 런타임이 따로 필요). Dockerfile 은 apt 로 해결돼
+#   있고 M1 에서 PDF 를 쓰지 않으므로 로컬에서는 방치한다.
+weasyprint~=63.0
+
+# ── 로컬 생성 모델 (LLM_BACKEND=local, ADR-005) ──────────────────────
+# torch 는 장치별 파일에 있다. 아래는 장치와 무관한 것들이다.
+#
+# ★ transformers 5.x 가 **필요하다.** 4.57 은 `qwen3_5`·`gemma4` 아키텍처를 모른다
+#   ("Transformers does not recognize this architecture"). 후보 3종 중 2종이
+#   그 계열이라 4.x 로는 재 볼 수조차 없다 (실측 2026-08-17).
+transformers~=5.15
+accelerate~=1.14
+# 구조화 출력 강제. 문법 제약이 없으면 citations·numbers_used 가 깨지고
+# 인용 검사·숫자 대조가 통째로 무력해진다 — 이 백엔드의 성패가 여기 걸린다.
+#
+# ⚠ 확인된 것은 임포트와 `xgrammar.contrib.hf.LogitsProcessor` 로딩까지다
+#   (2026-08-19 재확인). **실제 문법 제약 생성은 가중치를 받아
+#   `scripts/verify_local_model.py` 로 확인해야 한다.**
+xgrammar~=0.2
+
+# ── 리포트 그림 (eval/report_charts.py) ──────────────────────────────
+# 리포트 JSON 은 튜닝의 정량 증거이지만 사람이 읽는 형태가 아니다. planner §13 이
+# 이 파일들을 "발표 자료의 튜닝 과정 슬라이드 원자료"로 못박아 두었으므로
+# 기획서에 붙일 그림이 필요하다. kaleido 는 PNG 내보내기용(HTML 만 쓸 거면 불필요).
+plotly~=5.24
+kaleido==0.2.1              # 0.4 계열은 chrome 을 따로 요구한다 — 핀을 고정한다
+
+# ── 테스트 ───────────────────────────────────────────────────────────
+pytest~=8.3
+pytest-asyncio~=0.24
