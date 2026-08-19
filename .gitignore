@@ -50,3 +50,5 @@ out/
 #   python eval/report_charts.py --history
 eval/reports/charts/
 .claude
+
+*.log
