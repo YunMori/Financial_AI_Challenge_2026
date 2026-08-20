@@ -35,6 +35,7 @@ venv/
 
 # Node / Next.js
 node_modules/
+*.tsbuildinfo
 .next/
 out/
 .turbo/

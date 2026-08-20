@@ -53,6 +53,10 @@ COPY apps/api/data/ ./data/
 # **배포에서만** 터지는 종류의 사고다.
 COPY corpus/glossary/ ./corpus/glossary/
 
+# 요건 매트릭스·서류 카탈로그도 런타임에 읽는다 (F2 내비게이터 · F3 체크리스트).
+# 용어 사전과 **똑같은 이유로** 빠뜨리면 배포에서만 SystemExit 가 난다.
+COPY corpus/matrix/ ./corpus/matrix/
+
 COPY apps/api/app/ ./app/
 
 # 배포 환경이 PORT 를 주입하면 그것을 쓴다. 없으면 10000.
