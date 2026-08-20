@@ -8,14 +8,15 @@
 #   inferred  일반 규정에서 추론(기관 개별 명시 없음) → 계층 B, "일반적으로" + 사전확인 권고
 #   unknown   근거 없음                          → 회색 처리 + "해당 은행에 직접 확인 필요"
 #
-# M1 범위: 2기관 × 2비자. 3값 UI 를 실제로 보여주기 위한 최소 표본이며,
-# **일부러 unknown 을 남겨 둔다** — 전부 채우면 검증할 화면이 사라진다.
+# M1 범위: 6기관(모바일 ARC 근거로 확인된 전량) × 2비자. 기관 단위는 official
+# 이지만 **비자별 셀은 전부 unknown 이다** — 3값 UI 를 실제로 보여주기 위한
+# 최소 표본이며, 전부 채우면 검증할 화면이 사라진다.
 #
 # evidence 가 비어 있는데 상태가 official 인 셀은 있어서는 안 된다.
 # eval/ 의 매트릭스 검증 스크립트가 이를 강제하게 될 것(M1 이후).
 
 version: 1
-updated_at: "2026-08-11"
+updated_at: "2026-08-20"
 
 institutions:
 
@@ -98,6 +99,96 @@ institutions:
         purpose_docs: []
         notes_ko: 은행별 요건을 공식 문서로 확인하지 못했습니다.
         evidence: []
+
+  # ── 아래 4곳은 같은 보도자료의 **기관 목록에서 승격**한 항목이다 ─────────
+  #
+  # FSC-2025-0321-MOBILE-ARC 는 6개 은행을 이름으로 열거하고 비대면 가능 은행을
+  # 따로 명시한다. 그 열거가 곧 기관 단위 근거이므로, 신한·하나와 **같은 근거로**
+  # 카드를 세운다. 새로 수집한 사실은 하나도 없다 — 이미 있던 근거를 기관 축으로
+  # 편 것뿐이다.
+  #
+  # ★ `foreign_channel` 만 official 이다. 비자별 계좌개설 요건은 이 보도자료의
+  #   범위가 아니므로 visa_rules 는 전부 unknown 으로 남는다. 채우지 않는다.
+
+  - inst_code: BANK_IM
+    inst_name_ko: 아이엠뱅크
+    inst_name_i18n:
+      en: iM Bank
+      vi: Ngân hàng iM
+    foreign_channel:
+      mobile_arc_accepted: true
+      mobile_arc_since: "2025-03-21"
+      channels: [branch]
+      status: official
+      evidence:
+        - doc_id: FSC-2025-0321-MOBILE-ARC
+          source_url: https://www.fsc.go.kr/no010101/84208
+          published_at: "2025-03-20"
+          note: 6개 은행 열거에 포함. 비대면 명시 대상이 아니므로 대면만 적는다
+      dedicated_branch_count: null
+      languages_supported: []
+      languages_status: unknown
+    visa_rules: []
+
+  - inst_code: BANK_BUSAN
+    inst_name_ko: 부산은행
+    inst_name_i18n:
+      en: Busan Bank
+      vi: Ngân hàng Busan
+    foreign_channel:
+      mobile_arc_accepted: true
+      mobile_arc_since: "2025-03-21"
+      channels: [branch]
+      status: official
+      evidence:
+        - doc_id: FSC-2025-0321-MOBILE-ARC
+          source_url: https://www.fsc.go.kr/no010101/84208
+          published_at: "2025-03-20"
+          note: 6개 은행 열거에 포함. 비대면 명시 대상이 아니므로 대면만 적는다
+      dedicated_branch_count: null
+      languages_supported: []
+      languages_status: unknown
+    visa_rules: []
+
+  - inst_code: BANK_JEONBUK
+    inst_name_ko: 전북은행
+    inst_name_i18n:
+      en: Jeonbuk Bank
+      vi: Ngân hàng Jeonbuk
+    foreign_channel:
+      mobile_arc_accepted: true
+      mobile_arc_since: "2025-03-21"
+      channels: [branch, online]   # ★ 신한과 함께 비대면이 명시된 2곳 중 하나
+      status: official
+      evidence:
+        - doc_id: FSC-2025-0321-MOBILE-ARC
+          source_url: https://www.fsc.go.kr/no010101/84208
+          published_at: "2025-03-20"
+          note: 비대면 가능 은행으로 신한과 함께 명시됨
+      dedicated_branch_count: null
+      languages_supported: []
+      languages_status: unknown
+    visa_rules: []
+
+  - inst_code: BANK_JEJU
+    inst_name_ko: 제주은행
+    inst_name_i18n:
+      en: Jeju Bank
+      vi: Ngân hàng Jeju
+    foreign_channel:
+      mobile_arc_accepted: true
+      mobile_arc_since: "2025-03-21"
+      channels: [branch]
+      status: official
+      evidence:
+        - doc_id: FSC-2025-0321-MOBILE-ARC
+          source_url: https://www.fsc.go.kr/no010101/84208
+          published_at: "2025-03-20"
+          note: 6개 은행 열거에 포함. 비대면 명시 대상이 아니므로 대면만 적는다
+      dedicated_branch_count: null
+      languages_supported: []
+      languages_status: unknown
+    visa_rules: []
 
 # ── 전 기관 공통 (기관별이 아니라 제도 차원에서 확인된 사실) ──────────
 #

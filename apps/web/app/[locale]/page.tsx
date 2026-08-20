@@ -34,7 +34,7 @@ export default function LanguagePage({ params }: { params: Promise<{ locale: str
         ))}
       </ul>
 
-      <Link href={`/${locale}/chat`} className="block text-sm text-blue-700 underline underline-offset-2">
+      <Link href={`/${locale}/dashboard`} className="block text-sm text-blue-700 underline underline-offset-2">
         {t(locale, "common.skip")} →
       </Link>
     </div>

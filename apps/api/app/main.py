@@ -17,7 +17,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
 from app.config import get_settings
-from app.routers import chat
+from app.routers import chat, checklist, guide, institutions
 
 settings = get_settings()
 logging.basicConfig(level=settings.log_level)
@@ -43,6 +43,9 @@ app.add_middleware(
 
 
 app.include_router(chat.router)
+app.include_router(institutions.router)
+app.include_router(checklist.router)
+app.include_router(guide.router)
 
 
 class HealthResponse(BaseModel):

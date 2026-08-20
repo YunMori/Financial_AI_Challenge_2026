@@ -24,6 +24,7 @@ from app.schemas.chat import (
     DoneEvent,
     InvalidateEvent,
     MetaEvent,
+    NextAction,
     TokenEvent,
 )
 from app.schemas.common import Tier
@@ -47,7 +48,17 @@ def sse(event: str, payload) -> str:
     return f"event: {event}\ndata: {body}\n\n"
 
 
-async def event_stream(req: ChatRequest, request: Request) -> AsyncIterator[str]:
+async def event_stream(
+    req: ChatRequest,
+    request: Request,
+    next_action: NextAction | None = None,
+) -> AsyncIterator[str]:
+    """`/chat` 과 F4 가 **같은 스트림**을 쓴다.
+
+    F4 가 생성 경로를 따로 갖지 않는 이유는 이것 하나로 충분하다 — 이벤트 순서,
+    `invalidate` 교체, 폴백 처리를 두 벌 유지하면 한쪽이 반드시 뒤처진다.
+    다른 것은 `done` 에 붙는 `next_action` 뿐이다.
+    """
     pipeline = get_pipeline()
     streamed_any = False
 
@@ -94,6 +105,9 @@ async def event_stream(req: ChatRequest, request: Request) -> AsyncIterator[str]
                 tier=resp.tier,
                 latency_ms=ev.latency_ms,
                 fallback_reason=resp.fallback_reason,
+                # ★ 폴백에는 붙이지 않는다. 답하지 못한 뒤에 "이 서류로
+                #   체크리스트를 만드세요"를 내밀면 답한 척이 된다.
+                next_action=None if resp.is_fallback else next_action,
             ))
 
 

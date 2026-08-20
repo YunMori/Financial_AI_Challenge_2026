@@ -1,0 +1,27 @@
+# F3 체크리스트 PDF 조판 검증.
+#
+# `Dockerfile`(언어 샘플 조판)과 달리 **실제 산출물**을 렌더한다. 조판 의존성과
+# 폰트는 `apps/api/Dockerfile` 과 같고, 5GB 앱 이미지를 다시 만들지 않도록
+# 임베딩 모델·인덱스·torch 는 빼 놓았다 — PDF 는 그것들을 쓰지 않는다.
+#
+#   docker build -f apps/api/scripts/typeset/Dockerfile.checklist -t kb-checklist .
+#   docker run --rm kb-checklist
+#
+# ★ 빌드 컨텍스트는 **리포 루트**다 (corpus/ 를 담아야 하므로).
+FROM python:3.12-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        libpango-1.0-0 libpangoft2-1.0-0 libcairo2 libgdk-pixbuf-2.0-0 \
+        libffi8 shared-mime-info fonts-noto-core fonts-noto-cjk \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN pip install --no-cache-dir \
+        weasyprint==63.1 pdfplumber pydantic pydantic-settings pyyaml
+
+WORKDIR /app
+ENV PYTHONUNBUFFERED=1
+COPY apps/api/app/ ./app/
+COPY corpus/glossary/ ./corpus/glossary/
+COPY corpus/matrix/ ./corpus/matrix/
+
+CMD ["python", "-m", "app.docs.pdf_render", "--self-check"]

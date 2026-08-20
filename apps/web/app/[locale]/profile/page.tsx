@@ -91,7 +91,7 @@ export default function ProfilePage({ params }: { params: Promise<{ locale: stri
 
       <button
         type="button"
-        onClick={() => router.push(`/${locale}/chat`)}
+        onClick={() => router.push(`/${locale}/dashboard`)}
         className="tap w-full rounded-lg bg-blue-700 font-medium text-white hover:bg-blue-800"
       >
         {t(locale, "common.next")}

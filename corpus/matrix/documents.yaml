@@ -1,0 +1,191 @@
+# 서류 카탈로그 (F3 체크리스트)
+#
+# ★ **성격이 다른 두 목록을 섞지 않는다.**
+#
+#   account_opening       금융거래 목적 증빙 — 금융위 자료의 예시 목록. 은행 창구용.
+#   foreign_registration  외국인등록 제출서류 — 법무부(하이코리아) 기준. 출입국용.
+#
+# 둘을 한 표에 놓으면 이용자가 "재학증명서를 들고 은행에 가면 된다"고 읽는다.
+# 실제로는 발급 기관도 제출처도 다르다. 화면과 PDF 에서 절을 나눠 표시한다.
+#
+# ★ **근거가 있는 조합만 적는다.** 그럴듯한 조합을 채우면 그 자체가 환각이다.
+#   비어 있는 거래목적은 "공식 예시에서 확인하지 못했다"로 화면에 표시된다.
+#
+# ★ **주의문구와 설명은 3언어를 함께 둔다.** 이 문구들이야말로 문서를 어떻게
+#   읽어야 하는지를 정하는 안전 문구다. 베트남어 이용자에게 한국어로만 보이면
+#   "예시일 뿐이고 은행마다 다르다"는 경고가 전달되지 않는다.
+#   `_ko` 가 원문이고 `_i18n` 이 없으면 한국어로 폴백한다.
+#
+# 서류 코드의 3언어 라벨 소스는 `corpus/glossary/glossary.csv` 다.
+# 여기에는 **코드만** 적는다 — 라벨을 두 곳에 두면 반드시 어긋난다.
+
+version: 1
+updated_at: "2026-08-20"
+
+# ── 모든 경우에 공통으로 필요한 신분 서류 ────────────────────────────
+base:
+  status: official
+  doc_codes: [ARC, PASSPORT]
+  notes_ko: >-
+    외국인등록증은 금융거래 신분증으로 인정됩니다.
+    2025-03-21 부터 6개 은행에서 모바일 외국인등록증도 대면 제시가 가능합니다.
+  notes_i18n:
+    en: >-
+      The Alien Registration Card is accepted as ID for financial transactions.
+      Since 2025-03-21, six banks also accept the mobile version in person.
+    vi: >-
+      Thẻ đăng ký người nước ngoài được chấp nhận làm giấy tờ tùy thân cho giao
+      dịch tài chính. Từ 2025-03-21, sáu ngân hàng cũng chấp nhận bản di động
+      khi đến trực tiếp.
+  evidence:
+    - doc_id: FSC-2025-0321-MOBILE-ARC
+      source_url: https://www.fsc.go.kr/no010101/84208
+      published_at: "2025-03-20"
+
+# ── ① 계좌개설·한도해제 증빙 (금융위) ────────────────────────────────
+#
+# 출처의 표는 "증빙 서류(예시)" 라고 명시한다. 확정 목록이 아니며 은행마다
+# 다르다 — 그 사실을 주의문구로 함께 싣는다. 예시를 확정 목록으로 보여주면
+# 이용자가 창구에서 다른 서류를 요구받는다.
+account_opening:
+  caveat_ko: >-
+    아래는 금융위원회 자료에 제시된 예시입니다. 인출·이체한도, 금융거래목적
+    확인 서류와 절차, 일반계좌 전환 요건은 은행마다 다릅니다.
+    방문 전 해당 은행에 확인하시기 바랍니다.
+  caveat_i18n:
+    en: >-
+      These are examples cited in Financial Services Commission material. Limits,
+      the documents and procedure for confirming transaction purpose, and the
+      conditions for converting to a regular account differ by bank. Please
+      confirm with your bank before visiting.
+    vi: >-
+      Đây là các ví dụ được nêu trong tài liệu của Ủy ban Dịch vụ Tài chính. Hạn
+      mức, giấy tờ và thủ tục xác minh mục đích giao dịch, cũng như điều kiện
+      chuyển sang tài khoản thường khác nhau tùy ngân hàng. Vui lòng xác nhận
+      với ngân hàng của bạn trước khi đến.
+  caveat_evidence:
+    - doc_id: KFB-LIMIT-ACCOUNT
+      source_url: https://www.kfb.or.kr
+      published_at: null
+      note: 은행연합회 — 서류·절차·전환요건이 은행마다 상이함을 명시
+
+  by_purpose:
+    salary:
+      status: official
+      # 원문 표기: 재직증명서 · 급여명세표 · 고용계약서
+      # (사전 코드의 표기는 급여명세서 · 근로계약서 — 같은 서류의 다른 표기다)
+      doc_codes: [EMPLOYMENT_CERT, PAY_STUB, EMPLOYMENT_CONTRACT]
+      notes_ko: >-
+        급여 목적 개인 계좌의 증빙 예시입니다. 원문은 근로소득원천징수영수증,
+        건강보험자격득실확인서, 소득금액증명원, 사원증, 합격증도 함께 듭니다.
+      notes_i18n:
+        en: >-
+          Examples for a personal account opened to receive salary. The source
+          also lists a withholding tax receipt, health insurance enrollment
+          certificate, income certificate, employee ID card, and offer letter.
+        vi: >-
+          Ví dụ cho tài khoản cá nhân mở để nhận lương. Tài liệu gốc còn nêu
+          chứng từ khấu trừ thuế thu nhập, giấy xác nhận bảo hiểm y tế, giấy
+          chứng nhận thu nhập, thẻ nhân viên và thư mời nhận việc.
+      evidence:
+        - doc_id: FSC-ACCOUNT-OPENING-PRACTICE
+          source_url: https://www.fsc.go.kr/po010101/80539
+          published_at: null
+          note: 규제심판부 회의자료의 "증빙 서류(예시)" 표 — 개인(급여 목적시) 행
+
+    business:
+      status: official
+      doc_codes: [BUSINESS_LICENSE]
+      notes_ko: >-
+        사업 목적 증빙의 예시입니다. 법인은 물품공급계약서·부가가치세증명원·
+        납세증명서·재무제표·세금계산서 등이 함께 요구될 수 있습니다.
+      notes_i18n:
+        en: >-
+          Examples for a business purpose. Corporations may also be asked for a
+          supply contract, VAT certificate, tax payment certificate, financial
+          statements, or tax invoices.
+        vi: >-
+          Ví dụ cho mục đích kinh doanh. Doanh nghiệp có thể được yêu cầu thêm
+          hợp đồng cung ứng, giấy chứng nhận thuế GTGT, giấy chứng nhận nộp
+          thuế, báo cáo tài chính hoặc hóa đơn thuế.
+      evidence:
+        - doc_id: FSC-ACCOUNT-OPENING-PRACTICE
+          source_url: https://www.fsc.go.kr/po010101/80539
+          published_at: null
+          note: 같은 표의 법인 행
+
+    # ⬇ 아래 셋은 **의도적으로 비어 있다.** 금융위 예시 표에 없다.
+    #   그럴듯한 서류를 넣으면 근거 없는 안내가 된다.
+    tuition:
+      status: unknown
+      doc_codes: []
+      notes_ko: 학비 목적의 계좌개설 증빙 서류는 공식 예시에서 확인하지 못했습니다.
+      notes_i18n:
+        en: Documents for a tuition purpose were not found in the official examples.
+        vi: Không tìm thấy giấy tờ cho mục đích học phí trong các ví dụ chính thức.
+      evidence: []
+
+    living:
+      status: unknown
+      doc_codes: []
+      notes_ko: 생활비 목적의 계좌개설 증빙 서류는 공식 예시에서 확인하지 못했습니다.
+      notes_i18n:
+        en: Documents for a living-expenses purpose were not found in the official examples.
+        vi: Không tìm thấy giấy tờ cho mục đích sinh hoạt phí trong các ví dụ chính thức.
+      evidence: []
+
+    remittance:
+      status: unknown
+      doc_codes: []
+      notes_ko: 송금 목적의 계좌개설 증빙 서류는 공식 예시에서 확인하지 못했습니다.
+      notes_i18n:
+        en: Documents for a remittance purpose were not found in the official examples.
+        vi: Không tìm thấy giấy tờ cho mục đích chuyển tiền trong các ví dụ chính thức.
+      evidence: []
+
+# ── ② 외국인등록 제출서류 (법무부) ──────────────────────────────────
+#
+# ★ 계좌개설 요건이 **아니다.** 출입국·외국인청에 내는 서류다.
+#   체류자격 준비 단계에서 필요하므로 안내하되, 절을 반드시 분리한다.
+foreign_registration:
+  caveat_ko: >-
+    아래는 출입국·외국인청에 제출하는 외국인등록 서류이며 은행 계좌개설
+    요건이 아닙니다. 두 절차는 별개입니다.
+  caveat_i18n:
+    en: >-
+      These are documents submitted to the immigration office for foreign
+      registration, not requirements for opening a bank account. The two
+      procedures are separate.
+    vi: >-
+      Đây là giấy tờ nộp cho cơ quan xuất nhập cảnh để đăng ký người nước
+      ngoài, không phải điều kiện mở tài khoản ngân hàng. Hai thủ tục này
+      tách biệt nhau.
+  by_visa:
+    D-2:
+      status: official
+      doc_codes: [ENROLLMENT_CERT]
+      evidence: &hikorea_arc_docs
+        - doc_id: HIKOREA-ARC-DOCS
+          source_url: https://www.hikorea.go.kr
+          published_at: null
+          note: 체류자격별 외국인등록 제출서류 표
+    D-4:
+      status: official
+      doc_codes: [ENROLLMENT_CERT]
+      evidence: *hikorea_arc_docs
+    D-10:
+      status: official
+      doc_codes: [JOB_SEEKING_PLAN]
+      evidence: *hikorea_arc_docs
+    D-8:
+      status: official
+      doc_codes: [BUSINESS_LICENSE]
+      evidence: *hikorea_arc_docs
+    E-7:
+      status: official
+      doc_codes: [BUSINESS_LICENSE]
+      evidence: *hikorea_arc_docs
+    E-9:
+      status: official
+      doc_codes: [BUSINESS_LICENSE]
+      evidence: *hikorea_arc_docs
