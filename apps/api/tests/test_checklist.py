@@ -185,7 +185,7 @@ class TestEndpoints:
 
     def test_unsupported_language_is_rejected(self, client):
         assert client.post("/api/v1/checklist/preview",
-                           json={"lang": "th"}).status_code == 422
+                           json={"lang": "de"}).status_code == 422
 
     def test_pdf_route_degrades_to_503_without_weasyprint(self, client):
         """★ WeasyPrint 는 `OSError` 로 죽는다 — `ImportError` 만 잡으면 500 이다.

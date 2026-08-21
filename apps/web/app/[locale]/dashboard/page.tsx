@@ -64,6 +64,24 @@ export default function DashboardPage({ params }: { params: Promise<{ locale: st
           description={t(locale, "dashboard.cardChecklistDesc")}
         />
         <TaskCard
+          href={`/${locale}/tools/remittance`}
+          icon="💸"
+          title={t(locale, "dashboard.cardRemittance")}
+          description={t(locale, "dashboard.cardRemittanceDesc")}
+        />
+        <TaskCard
+          href={`/${locale}/tools/products`}
+          icon="🏧"
+          title={t(locale, "dashboard.cardProducts")}
+          description={t(locale, "dashboard.cardProductsDesc")}
+        />
+        <TaskCard
+          href={`/${locale}/tools/scam`}
+          icon="🛡️"
+          title={t(locale, "dashboard.cardScam")}
+          description={t(locale, "dashboard.cardScamDesc")}
+        />
+        <TaskCard
           href={`/${locale}/chat`}
           icon="💬"
           title={t(locale, "dashboard.cardChat")}

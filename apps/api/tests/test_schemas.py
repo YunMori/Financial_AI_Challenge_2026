@@ -98,7 +98,7 @@ class TestChatRequest:
     def test_unsupported_language_rejected(self):
         """검수되지 않은 언어는 공개하지 않는다 (planner §10.3)."""
         with pytest.raises(ValidationError):
-            ChatRequest(lang="th", message="질문")
+            ChatRequest(lang="de", message="질문")
 
     def test_minimal_request(self):
         req = ChatRequest(lang="vi", message="Tại sao?")

@@ -34,7 +34,7 @@ def make_ctx(n=2, all_government=True, has_stale=False) -> EvidenceContext:
 
 def answer(**kw) -> LLMAnswer:
     base = dict(answer="한도제한계좌의 이체 한도는 100만원입니다.", tier=Tier.A,
-                citations=[Citation(ref=1, used_for="한도")], numbers_used=["100만원"])
+                citations=[Citation(ref=1)], numbers_used=["100만원"])
     return LLMAnswer(**{**base, **kw})
 
 
@@ -137,7 +137,7 @@ class TestFinalize:
 
     def test_phantom_citation_is_blocked(self):
         """근거 2건뿐인데 [근거 5]를 인용하면 지어낸 것이다."""
-        r = finalize(answer(citations=[Citation(ref=5, used_for="x")]), make_ctx(n=2), Lang.KO)
+        r = finalize(answer(citations=[Citation(ref=5)]), make_ctx(n=2), Lang.KO)
         assert r.fallback_reason is FallbackReason.PHANTOM_CITATION
 
     def test_hallucinated_number_is_blocked(self):

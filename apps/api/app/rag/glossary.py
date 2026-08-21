@@ -19,6 +19,7 @@ from functools import lru_cache
 from pathlib import Path
 
 from app.config import API_ROOT, REPO_ROOT
+from app.schemas.common import Lang
 
 
 def _find_glossary() -> Path:
@@ -122,10 +123,15 @@ def load_glossary(path: Path | None = None) -> Glossary:
     terms: list[Term] = []
     with csv_path.open(encoding="utf-8", newline="") as f:
         for row in csv.DictReader(f):
+            # ★ 언어 목록을 여기 박아 두면 안 된다. 예전에는 `("en", "vi")` 가
+            #   하드코딩돼 있어서, CSV 에 zh·uz·th 열을 채워 넣어도 로더가
+            #   읽지 않고 **조용히 한국어로 폴백**했다 (2026-08-21). 사전은
+            #   오역이 치명적인 항목을 지키는 장치인데 그 장치가 꺼진 셈이었다.
+            #   `Lang` 을 단일 출처로 삼아 언어를 늘릴 때 자동으로 따라오게 한다.
             translations = {
-                lang: row[lang].strip()
-                for lang in ("en", "vi")
-                if row.get(lang, "").strip()
+                lang.value: row[lang.value].strip()
+                for lang in Lang
+                if lang is not Lang.KO and row.get(lang.value, "").strip()
             }
             terms.append(Term(
                 code=row["code"].strip(),

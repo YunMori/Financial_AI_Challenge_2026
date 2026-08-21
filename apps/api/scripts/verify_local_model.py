@@ -43,7 +43,7 @@ OK, BAD, WARN = "✅", "❌", "⚠️ "
 PROBE_SYSTEM = (
     "당신은 근거만으로 답하는 안내 도우미입니다. 아래 JSON 스키마로만 답하십시오.\n"
     '{"answer": 문자열(한국어 1~2문장), "tier": "A"|"B"|"C", '
-    '"citations": [{"ref": 정수, "used_for": 문자열}], '
+    '"citations": [{"ref": 정수}], '
     '"numbers_used": [문자열], "needs_confirmation": 불리언, "out_of_scope": 불리언}\n'
     "answer 에 등장시킨 모든 수치를 numbers_used 에 빠짐없이 나열하고, "
     "사용한 근거 번호를 citations 에 기록합니다."

@@ -9,6 +9,7 @@ import { InstitutionCard } from "@/components/institution/InstitutionCard";
 import {
   fetchInstitutions,
   fetchRankingPolicy,
+  isAbortError,
   type InstitutionsResponse,
   type RankingPolicy,
 } from "@/lib/api";
@@ -33,7 +34,14 @@ export default function InstitutionsPage({ params }: { params: Promise<{ locale:
     const ctx = loadContext();
     setVisa(ctx.visa);
     const ac = new AbortController();
-    fetchInstitutions(locale, ctx.visa, ac.signal).then(setData).catch(() => setError(true));
+    // 새 조회를 시작하면 지난 실패는 지운다 — 남겨 두면 성공한 화면 위에
+    // 에러 문구가 계속 붙어 있다.
+    setError(false);
+    fetchInstitutions(locale, ctx.visa, ac.signal)
+      .then(setData)
+      // 취소는 실패가 아니다(`isAbortError` 주석 참조). 걸러내지 않으면
+      // StrictMode 의 두 번째 실행이 성공해도 배너가 함께 뜬다.
+      .catch((e) => { if (!isAbortError(e)) setError(true); });
     fetchRankingPolicy(ac.signal).then(setPolicy).catch(() => {});
     return () => ac.abort();
   }, [locale]);

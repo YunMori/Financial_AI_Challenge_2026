@@ -27,6 +27,18 @@ CONTACTS: dict[Lang, list[str]] = {
         "Tư vấn Cơ quan Giám sát Tài chính: 1332",
         "Trung tâm Thông tin Người nước ngoài: 1345 (đa ngôn ngữ)",
     ],
+    Lang.ZH: [
+        "金融监督院金融咨询：1332",
+        "外国人综合咨询中心：1345（多语种）",
+    ],
+    Lang.UZ: [
+        "Moliyaviy nazorat xizmati maslahati: 1332",
+        "Chet elliklar axborot markazi: 1345 (ko'p tilli)",
+    ],
+    Lang.TH: [
+        "ปรึกษาสำนักงานกำกับดูแลการเงิน: 1332",
+        "ศูนย์ข้อมูลชาวต่างชาติ: 1345 (หลายภาษา)",
+    ],
 }
 
 SCAM_CONTACTS: dict[Lang, list[str]] = {
@@ -35,6 +47,11 @@ SCAM_CONTACTS: dict[Lang, list[str]] = {
               "Your bank's call center (request payment suspension)"],
     Lang.VI: ["Cảnh sát: 112", "Cơ quan Giám sát Tài chính: 1332",
               "Tổng đài ngân hàng của bạn (yêu cầu đình chỉ thanh toán)"],
+    Lang.ZH: ["报警：112", "金融监督院：1332", "您开户银行客服（申请止付）"],
+    Lang.UZ: ["Politsiya: 112", "Moliyaviy nazorat xizmati: 1332",
+              "Bankingiz call-markazi (to'lovni to'xtatishni so'rang)"],
+    Lang.TH: ["ตำรวจ: 112", "สำนักงานกำกับดูแลการเงิน: 1332",
+              "คอลเซ็นเตอร์ธนาคารของคุณ (ขอระงับการจ่ายเงิน)"],
 }
 
 # 사유별 문구. 여러 사유가 같은 문구를 공유한다 — 이용자 입장에서
@@ -56,6 +73,19 @@ _TEMPLATES: dict[FallbackReason, dict[Lang, str]] = {
             "nên chúng tôi không thể dự đoán. Vui lòng kiểm tra các yêu cầu chung và "
             "liên hệ trực tiếp với tổ chức đó."
         ),
+        Lang.ZH: (
+            "是否批准、额度和利率由各金融机构自行审核决定，我们无法预测。"
+            "请先确认一般条件，然后直接联系相关机构。"
+        ),
+        Lang.UZ: (
+            "Ma'qullash, limit va foiz stavkalari har bir moliya muassasasining o'z "
+            "ko'rib chiqishi bilan belgilanadi, shuning uchun biz buni oldindan ayta "
+            "olmaymiz. Umumiy talablarni tekshirib, muassasaga to'g'ridan-to'g'ri murojaat qiling."
+        ),
+        Lang.TH: (
+            "การอนุมัติ วงเงิน และอัตราดอกเบี้ยขึ้นอยู่กับการพิจารณาของแต่ละสถาบันการเงิน "
+            "เราจึงไม่สามารถคาดการณ์ได้ กรุณาตรวจสอบเงื่อนไขทั่วไปแล้วติดต่อสถาบันนั้นโดยตรง"
+        ),
     },
     FallbackReason.LOW_CONFIDENCE: {
         Lang.KO: (
@@ -69,6 +99,18 @@ _TEMPLATES: dict[FallbackReason, dict[Lang, str]] = {
         Lang.VI: (
             "Chúng tôi không tìm thấy tài liệu chính thức trả lời chính xác câu hỏi này. "
             "Thay vì đưa thông tin chưa được xác minh, đây là các kênh chính thức."
+        ),
+        Lang.ZH: (
+            "我们未能找到能准确回答此问题的官方资料。"
+            "为避免提供未经核实的信息，以下是官方咨询渠道。"
+        ),
+        Lang.UZ: (
+            "Bu savolga aniq javob beradigan rasmiy hujjatni topa olmadik. "
+            "Tasdiqlanmagan ma'lumot berish o'rniga, quyida rasmiy kanallar keltirilgan."
+        ),
+        Lang.TH: (
+            "เราไม่พบเอกสารทางการที่ตอบคำถามนี้ได้อย่างแม่นยำ "
+            "แทนที่จะให้ข้อมูลที่ยังไม่ได้ตรวจสอบ นี่คือช่องทางติดต่อทางการ"
         ),
     },
     FallbackReason.SCAM_VERDICT: {
@@ -86,6 +128,19 @@ _TEMPLATES: dict[FallbackReason, dict[Lang, str]] = {
             "Nếu nghi ngờ, hãy liên hệ ngay các số dưới đây và ngừng chuyển tiền hoặc "
             "cung cấp thông tin cá nhân."
         ),
+        Lang.ZH: (
+            "我们无法判断某个联系或交易是否为诈骗。"
+            "如果您有疑虑，请立即拨打下列号码，并停止汇款或提供个人信息。"
+        ),
+        Lang.UZ: (
+            "Muayyan aloqa yoki tranzaksiya firibgarlik ekanini biz aniqlay olmaymiz. "
+            "Shubhangiz bo'lsa, quyidagi raqamlarga darhol murojaat qiling va pul "
+            "o'tkazish yoki shaxsiy ma'lumot berishni to'xtating."
+        ),
+        Lang.TH: (
+            "เราไม่สามารถตัดสินว่าการติดต่อหรือธุรกรรมใดเป็นการหลอกลวงหรือไม่ "
+            "หากคุณสงสัย โปรดติดต่อหมายเลขด้านล่างทันที และหยุดการโอนเงินหรือให้ข้อมูลส่วนตัว"
+        ),
     },
     FallbackReason.MODEL_REFUSAL: {
         Lang.KO: (
@@ -99,6 +154,18 @@ _TEMPLATES: dict[FallbackReason, dict[Lang, str]] = {
         Lang.VI: (
             "Chúng tôi không thể trả lời câu hỏi này. Nếu bạn có câu hỏi chung về thủ tục "
             "tài chính, vui lòng hỏi lại, hoặc sử dụng các kênh chính thức dưới đây."
+        ),
+        Lang.ZH: (
+            "我们不对此问题提供回答。如果您有关于金融手续的一般疑问，"
+            "请重新提问；如属紧急事项，请使用下列官方渠道。"
+        ),
+        Lang.UZ: (
+            "Bu savolga javob bermaymiz. Moliyaviy tartib-qoidalar bo'yicha umumiy "
+            "savolingiz bo'lsa, qayta so'rang yoki quyidagi rasmiy kanallardan foydalaning."
+        ),
+        Lang.TH: (
+            "เราไม่ให้คำตอบสำหรับคำถามนี้ หากคุณมีคำถามทั่วไปเกี่ยวกับขั้นตอนทางการเงิน "
+            "กรุณาถามใหม่ หรือใช้ช่องทางทางการด้านล่างหากเป็นเรื่องเร่งด่วน"
         ),
     },
     FallbackReason.UPSTREAM_ERROR: {
@@ -114,6 +181,18 @@ _TEMPLATES: dict[FallbackReason, dict[Lang, str]] = {
             "Lỗi tạm thời khiến chúng tôi không tạo được câu trả lời. Vui lòng thử lại sau, "
             "hoặc dùng các kênh chính thức dưới đây nếu gấp."
         ),
+        Lang.ZH: (
+            "由于临时故障未能生成回答。请稍后再试，"
+            "如属紧急事项请使用下列官方渠道。"
+        ),
+        Lang.UZ: (
+            "Vaqtinchalik xatolik tufayli javob yarata olmadik. Birozdan so'ng qayta "
+            "urinib ko'ring yoki shoshilinch bo'lsa quyidagi rasmiy kanallardan foydalaning."
+        ),
+        Lang.TH: (
+            "เกิดข้อผิดพลาดชั่วคราวจึงไม่สามารถสร้างคำตอบได้ กรุณาลองใหม่ในภายหลัง "
+            "หรือใช้ช่องทางทางการด้านล่างหากเร่งด่วน"
+        ),
     },
     FallbackReason.INJECTION_BLOCKED: {
         Lang.KO: "질문을 이해하지 못했습니다. 금융 절차에 대해 궁금한 점을 다시 말씀해 주세요.",
@@ -121,6 +200,10 @@ _TEMPLATES: dict[FallbackReason, dict[Lang, str]] = {
                  "to know about financial procedures.",
         Lang.VI: "Chúng tôi không hiểu câu hỏi. Vui lòng diễn đạt lại điều bạn muốn biết "
                  "về thủ tục tài chính.",
+        Lang.ZH: "我们无法理解该问题。请重新说明您想了解的金融手续相关内容。",
+        Lang.UZ: "Savolni tushunmadik. Moliyaviy tartib-qoidalar haqida bilmoqchi "
+                 "bo'lgan narsangizni qayta ifodalang.",
+        Lang.TH: "เราไม่เข้าใจคำถาม กรุณาอธิบายใหม่ว่าคุณต้องการทราบเรื่องใดเกี่ยวกับขั้นตอนทางการเงิน",
     },
 }
 
@@ -147,6 +230,11 @@ _GENERIC_NOTICE: dict[Lang, str] = {
              "confirm with the financial institution before visiting.",
     Lang.VI: "* Đây là hướng dẫn chung. Yêu cầu có thể khác nhau tùy tổ chức — vui lòng "
              "xác nhận với tổ chức tài chính trước khi đến.",
+    Lang.ZH: "※ 这是一般性说明。各机构要求可能不同，前往前请务必向相关金融机构确认。",
+    Lang.UZ: "* Bu umumiy ma'lumot. Talablar muassasaga qarab farq qiladi — borishdan "
+             "oldin moliya muassasasi bilan albatta tasdiqlang.",
+    Lang.TH: "* นี่คือคำแนะนำทั่วไป ข้อกำหนดแตกต่างกันไปตามสถาบัน "
+             "กรุณายืนยันกับสถาบันการเงินก่อนไปติดต่อ",
 }
 
 

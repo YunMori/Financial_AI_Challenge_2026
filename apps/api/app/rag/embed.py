@@ -44,7 +44,7 @@ def _needs_e5_prefix(model_name: str) -> bool:
 class FastEmbedBackend:
     """ONNX 기반. torch 를 끌어오지 않아 이미지가 가볍다."""
 
-    def __init__(self, model_name: str) -> None:
+    def __init__(self, model_name: str, cache_dir: str | None = None) -> None:
         # ★ onnxruntime-gpu 는 nvidia-* pip 패키지의 CUDA DLL 을 Windows 검색
         #   경로에 자동 등록하지 않는다(`site-packages/nvidia/cu13/bin/x86_64/`).
         #   이걸 부르지 않으면 CUDAExecutionProvider 생성이 실패하고 **에러 없이
@@ -66,7 +66,11 @@ class FastEmbedBackend:
 
         # providers 를 넘기지 않는다. fastembed 0.8 의 `cuda=Device.AUTO` 기본값이
         # CUDA EP 가 살아 있으면 잡고 없으면 CPU 로 간다 — 장치별 분기가 필요 없다.
-        self._model = TextEmbedding(model_name=model_name)
+        #
+        # ★ `cache_dir` 은 반드시 넘긴다. 생략하면 `%TEMP%` 로 가고, temp 가
+        #   비워지면 첫 질의가 재다운로드를 물거나(23초) 오프라인에서 죽는다.
+        #   근거는 `config.Settings.embed_cache_path` 주석에 있다.
+        self._model = TextEmbedding(model_name=model_name, cache_dir=cache_dir)
         self._prefix = _needs_e5_prefix(model_name)
         self.model_name = model_name
         self.dim = self._probe_dim()
@@ -134,5 +138,6 @@ def get_embedder(model_name: str | None = None, backend: str | None = None) -> E
     if backend == "sentence_transformers":
         return SentenceTransformersBackend(model_name)
     if backend == "fastembed":
-        return FastEmbedBackend(model_name)
+        settings.embed_cache_path.mkdir(parents=True, exist_ok=True)
+        return FastEmbedBackend(model_name, cache_dir=str(settings.embed_cache_path))
     raise SystemExit(f"알 수 없는 EMBED_BACKEND: {backend!r} (fastembed | sentence_transformers)")

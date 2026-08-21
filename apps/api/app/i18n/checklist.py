@@ -17,6 +17,9 @@ TITLE: dict[Lang, str] = {
     Lang.KO: "K-Buddy 서류 체크리스트",
     Lang.EN: "K-Buddy Document Checklist",
     Lang.VI: "Danh sách giấy tờ K-Buddy",
+    Lang.ZH: "K-Buddy 材料清单",
+    Lang.UZ: "K-Buddy hujjatlar ro'yxati",
+    Lang.TH: "รายการเอกสาร K-Buddy",
 }
 
 SECTION_TITLES: dict[str, dict[Lang, str]] = {
@@ -24,16 +27,25 @@ SECTION_TITLES: dict[str, dict[Lang, str]] = {
         Lang.KO: "① 공통 신분 서류",
         Lang.EN: "1. Identification (all cases)",
         Lang.VI: "1. Giấy tờ tùy thân (mọi trường hợp)",
+        Lang.ZH: "① 通用身份证件",
+        Lang.UZ: "1. Shaxsni tasdiqlovchi hujjatlar (barcha holatlar)",
+        Lang.TH: "1. เอกสารยืนยันตัวตน (ทุกกรณี)",
     },
     "account_opening": {
         Lang.KO: "② 계좌개설·한도해제 증빙 (금융위원회)",
         Lang.EN: "2. Proof of transaction purpose — banks (FSC)",
         Lang.VI: "2. Chứng minh mục đích giao dịch — ngân hàng (FSC)",
+        Lang.ZH: "② 开户·解除限额证明（金融委员会）",
+        Lang.UZ: "2. Tranzaksiya maqsadini tasdiqlash — banklar (FSC)",
+        Lang.TH: "2. หลักฐานวัตถุประสงค์ธุรกรรม — ธนาคาร (FSC)",
     },
     "foreign_registration": {
         Lang.KO: "③ 외국인등록 제출서류 (법무부) — 은행 서류가 아닙니다",
         Lang.EN: "3. Foreign registration documents (MOJ) — not for banks",
         Lang.VI: "3. Giấy tờ đăng ký người nước ngoài (MOJ) — không dùng cho ngân hàng",
+        Lang.ZH: "③ 外国人登录提交材料（法务部）— 不是银行用材料",
+        Lang.UZ: "3. Chet ellik ro'yxatga olish hujjatlari (MOJ) — banklar uchun emas",
+        Lang.TH: "3. เอกสารลงทะเบียนคนต่างด้าว (MOJ) — ไม่ใช่เอกสารสำหรับธนาคาร",
     },
 }
 
@@ -42,30 +54,46 @@ COL_LOCAL: dict[Lang, str] = {
     Lang.KO: "서류",
     Lang.EN: "Document",
     Lang.VI: "Giấy tờ",
+    Lang.ZH: "材料",
+    Lang.UZ: "Hujjat",
+    Lang.TH: "เอกสาร",
 }
 COL_KO: dict[Lang, str] = {
     Lang.KO: "한국어 표기",
     Lang.EN: "Korean (show this at the counter)",
     Lang.VI: "Tiếng Hàn (đưa cho nhân viên xem)",
+    Lang.ZH: "韩语（请出示给柜台）",
+    Lang.UZ: "Koreyscha (bankda ko'rsating)",
+    Lang.TH: "ภาษาเกาหลี (แสดงที่เคาน์เตอร์)",
 }
 
 PROFILE_LABELS: dict[str, dict[Lang, str]] = {
-    "visa": {Lang.KO: "체류자격", Lang.EN: "Visa", Lang.VI: "Tư cách lưu trú"},
-    "purpose": {Lang.KO: "거래목적", Lang.EN: "Purpose", Lang.VI: "Mục đích"},
-    "institution": {Lang.KO: "기관", Lang.EN: "Institution", Lang.VI: "Tổ chức"},
-    "generated_at": {Lang.KO: "발급 기준일", Lang.EN: "Generated on", Lang.VI: "Ngày tạo"},
+    "visa": {Lang.KO: "체류자격", Lang.EN: "Visa", Lang.VI: "Tư cách lưu trú",
+             Lang.ZH: "居留资格", Lang.UZ: "Yashash maqomi", Lang.TH: "สถานะการพำนัก"},
+    "purpose": {Lang.KO: "거래목적", Lang.EN: "Purpose", Lang.VI: "Mục đích",
+                Lang.ZH: "交易目的", Lang.UZ: "Maqsad", Lang.TH: "วัตถุประสงค์"},
+    "institution": {Lang.KO: "기관", Lang.EN: "Institution", Lang.VI: "Tổ chức",
+                    Lang.ZH: "机构", Lang.UZ: "Muassasa", Lang.TH: "สถาบัน"},
+    "generated_at": {Lang.KO: "발급 기준일", Lang.EN: "Generated on", Lang.VI: "Ngày tạo",
+                     Lang.ZH: "生成日期", Lang.UZ: "Yaratilgan sana", Lang.TH: "วันที่สร้าง"},
 }
 
 SOURCES: dict[Lang, str] = {
     Lang.KO: "출처",
     Lang.EN: "Sources",
     Lang.VI: "Nguồn",
+    Lang.ZH: "来源",
+    Lang.UZ: "Manbalar",
+    Lang.TH: "แหล่งที่มา",
 }
 
 NOT_CONFIRMED: dict[Lang, str] = {
     Lang.KO: "이 항목은 공식 문서로 확인하지 못했습니다. 해당 은행에 직접 확인하세요.",
     Lang.EN: "This item could not be confirmed in official sources. Please ask the bank directly.",
     Lang.VI: "Mục này chưa được xác nhận trong tài liệu chính thức. Vui lòng hỏi trực tiếp ngân hàng.",
+    Lang.ZH: "该项目未能通过官方文件确认。请直接向相关银行确认。",
+    Lang.UZ: "Bu band rasmiy hujjatlarda tasdiqlanmadi. Iltimos, bankdan to'g'ridan-to'g'ri so'rang.",
+    Lang.TH: "รายการนี้ไม่สามารถยืนยันได้จากเอกสารทางการ กรุณาสอบถามธนาคารโดยตรง",
 }
 
 # planner §11.2 — 화면에 상시 존재해야 하는 고지가 인쇄물에도 따라간다.
@@ -75,12 +103,19 @@ FINAL_AUTHORITY: dict[Lang, str] = {
              "guidance, not an approval.",
     Lang.VI: "Tổ chức tài chính đưa ra quyết định cuối cùng. Tài liệu này chỉ mang tính "
              "hướng dẫn, không phải kết quả xét duyệt.",
+    Lang.ZH: "最终确认主体是金融机构。本文件为指引，并非审核结果。",
+    Lang.UZ: "Yakuniy qarorni moliya muassasasi qabul qiladi. Bu hujjat yo'riqnoma "
+             "bo'lib, tasdiqlash natijasi emas.",
+    Lang.TH: "สถาบันการเงินเป็นผู้ตัดสินใจขั้นสุดท้าย เอกสารนี้เป็นคำแนะนำ ไม่ใช่ผลการอนุมัติ",
 }
 
 ANTI_PHISHING: dict[Lang, str] = {
     Lang.KO: "K-Buddy 는 계좌번호·비밀번호를 요구하지 않습니다.",
     Lang.EN: "K-Buddy never asks for your account number or password.",
     Lang.VI: "K-Buddy không bao giờ hỏi số tài khoản hoặc mật khẩu của bạn.",
+    Lang.ZH: "K-Buddy 不会索要您的账号或密码。",
+    Lang.UZ: "K-Buddy hech qachon hisob raqamingiz yoki parolingizni so'ramaydi.",
+    Lang.TH: "K-Buddy ไม่เคยขอหมายเลขบัญชีหรือรหัสผ่านของคุณ",
 }
 
 
