@@ -17,10 +17,17 @@ class Citation(BaseModel):
 
     긴 `chunk_id` 를 모델에게 출력시키면 오타가 난다. 컨텍스트에 `[근거 n]`
     으로 번호를 붙여 주고 그 n 만 회수한 뒤, 서버가 chunk_id 로 역매핑한다.
+
+    ★ `used_for`(이 근거로 뒷받침한 요지, 한 줄)를 걷어냈다 (2026-08-21).
+      **아무도 읽지 않는 필드였다** — 후처리·API 응답·프론트·평가기 어디에도
+      참조가 없었다. 그런데 근거 5건이면 한국어 산문 5줄을 매 응답 생성했고,
+      로컬 디코딩이 13 tok/s 라 그 값이 그대로 이용자 대기 시간이 됐다.
+
+      후처리가 검사하는 것은 `ref` 의 **실재성**이지 요지의 내용이 아니다
+      (`tiering.postprocess`). 즉 이 필드가 없어도 가드레일은 그대로다.
     """
 
     ref: int = Field(description="컨텍스트의 [근거 n] 에서 n. 1부터 시작")
-    used_for: str = Field(description="이 근거로 뒷받침한 문장의 요지 (한 줄)")
 
 
 class LLMAnswer(BaseModel):

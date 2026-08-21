@@ -17,10 +17,34 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
 from app.config import get_settings
-from app.routers import chat, checklist, guide, institutions
+from app.routers import (
+    chat,
+    checklist,
+    guide,
+    institutions,
+    products,
+    remittance,
+    scam,
+)
 
 settings = get_settings()
 logging.basicConfig(level=settings.log_level)
+
+# ★★ **httpx 가 요청 URL 을 INFO 로 찍는다 — 거기에 인증키가 있다.**
+#
+#   FSS 는 `?auth=<키>`, ECOS 는 경로 세그먼트에 키를 싣는다. `redact.py` 는
+#   **예외 메시지**를 지우지만, httpx 는 **성공한 요청도** 로그에 남긴다:
+#
+#     INFO:httpx:HTTP Request: GET https://finlife.fss.or.kr/...?auth=<키> "200 OK"
+#
+#   실측 2026-08-21 — 조회가 성공할수록 키가 더 많이 쌓인다. 예외 처리로는
+#   절대 못 막는 경로라 로거 자체를 올린다. WARNING 이면 우리가 남기는
+#   "FSS 조회 불가" 같은 진단은 그대로 보인다.
+#
+#   ⚠ 디버깅으로 INFO 를 되돌리면 키가 다시 새어 나온다. 필요하면 그때만
+#     한시적으로 켜고 로그 파일을 지운다.
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
 
 limiter = Limiter(key_func=get_remote_address)
 
@@ -46,6 +70,9 @@ app.include_router(chat.router)
 app.include_router(institutions.router)
 app.include_router(checklist.router)
 app.include_router(guide.router)
+app.include_router(scam.router)
+app.include_router(products.router)
+app.include_router(remittance.router)
 
 
 class HealthResponse(BaseModel):
@@ -65,6 +92,6 @@ def healthz() -> HealthResponse:
     return HealthResponse(
         status="ok",
         version=app.version,
-        llm_configured=settings.llm_enabled,
+        llm_configured=settings.generation_enabled,
         index_present=settings.chroma_path.exists(),
     )

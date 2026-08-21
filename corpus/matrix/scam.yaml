@@ -1,0 +1,341 @@
+# 사기 유형 대조 체크리스트 (F8)
+#
+# ★ **이 화면은 판정하지 않는다.** "이 전화가 사기인가요?"는 계층 C 다 —
+#   개별 사안의 판단은 수사기관의 몫이고, 우리가 "사기가 아닙니다"라고 답하면
+#   그 한 번의 오답이 피해로 직결된다. 여기 있는 것은 **대조표**이지 판정기가
+#   아니며, 화면은 그 사실을 문구로 명시한다(planner §6 데모 시나리오 3).
+#
+# ★ **코퍼스에 있는 사실만 적는다.** 그럴듯한 사기 수법을 지어내면 그 자체가
+#   환각이고, 목록에 없는 수법을 이용자가 "안전하다"고 읽는다. 아래 항목은
+#   전부 아래 3개 문서에서 그대로 왔다.
+#
+#     KOREA-PHISHING-GUIDE      대한민국 정책브리핑 「보이스피싱 예방과 피해구제 신청 방법」
+#     FSC-2024-PHISHING-112     금융위원회 「보이스피싱, 이제 112로 신고하세요」
+#     FSC-PHISHING-FACE-TO-FACE 금융위원회 「대면편취형 보이스피싱도 피해구제 대상에 포함」
+#
+#   세 문서 모두 front-matter 의 `published_at` 이 null 이다. 없는 날짜를
+#   지어내지 않고 그대로 null 로 둔다 — `verified_at` 이 우리가 원문을 확인한 날이다.
+#
+# ★ **주의문구와 설명은 공개 언어를 함께 둔다.** documents.yaml 과 같은 이유다 —
+#   "100% 사기"라는 경고가 한국어로만 보이면 그 경고가 전달되지 않는다.
+#   `_ko` 가 원문이고 `_i18n` 에 없으면 한국어로 폴백한다.
+
+version: 1
+updated_at: "2026-08-21"
+
+# ── 대조 체크리스트 ──────────────────────────────────────────────────
+#
+# `certainty` 는 **원문의 단정 강도**를 그대로 옮긴 것이지 우리 판단이 아니다.
+#   definite  원문이 "100% 사기"라고 단정한 것
+#   warning   원문이 예방 수칙으로 제시한 것
+# 화면은 definite 를 더 강하게 표시하되, 둘 다 "판정"이 아니라 "대조"다.
+types:
+  - code: IMPERSONATION_AUTHORITY
+    certainty: definite
+    title_ko: 수사기관·금융기관을 사칭해 정보나 돈을 요구
+    title_i18n:
+      en: Someone claiming to be police, a prosecutor, or a bank asks for information or money
+      vi: Người tự xưng là cơ quan điều tra hoặc ngân hàng yêu cầu thông tin hoặc tiền
+      zh: 有人冒充侦查机关或金融机构索要信息或钱财
+      uz: Tergov organi yoki bank vakili deb tanishtirgan shaxs ma'lumot yoki pul so'raydi
+      th: มีผู้แอบอ้างเป็นหน่วยงานสืบสวนหรือธนาคารขอข้อมูลหรือเงิน
+    body_ko: >-
+      수사기관이나 금융기관이라며 개인정보 또는 자금을 요구하는 경우,
+      출처에 따르면 100% 사기입니다.
+    body_i18n:
+      en: >-
+        If someone claiming to be an investigative or financial institution asks for
+        your personal information or money, the source states this is 100% fraud.
+      vi: >-
+        Nếu ai đó tự xưng là cơ quan điều tra hoặc tổ chức tài chính yêu cầu thông tin
+        cá nhân hoặc tiền, theo nguồn tin đây là lừa đảo 100%.
+      zh: >-
+        若有人冒充侦查机关或金融机构索要个人信息或资金，据来源所述，这 100% 是诈骗。
+      uz: >-
+        Agar kimdir tergov organi yoki moliya muassasasi vakili deb tanishtirib shaxsiy
+        ma'lumot yoki pul so'rasa, manbaga ko'ra bu 100% firibgarlikdir.
+      th: >-
+        หากมีผู้แอบอ้างเป็นหน่วยงานสืบสวนหรือสถาบันการเงินขอข้อมูลส่วนตัวหรือเงิน
+        ตามแหล่งข้อมูลระบุว่านี่คือการหลอกลวง 100%
+    evidence:
+      - doc_id: KOREA-PHISHING-GUIDE
+        publisher: 대한민국 정책브리핑
+        source_url: https://www.korea.kr/news/policyNewsView.do?newsId=148933209
+        published_at: null
+        verified_at: "2026-08-12"
+
+  - code: FAKE_POPUP
+    certainty: definite
+    title_ko: 금융기관 팝업창이 계좌번호·보안카드 번호를 입력하라고 요구
+    title_i18n:
+      en: A bank pop-up window asks you to enter your account or security card numbers
+      vi: Cửa sổ bật lên của ngân hàng yêu cầu nhập số tài khoản hoặc số thẻ bảo mật
+      zh: 金融机构弹窗要求输入账号或安全卡号码
+      uz: Bank qalqib chiquvchi oynasi hisob raqami yoki xavfsizlik karta raqamini so'raydi
+      th: หน้าต่างป๊อปอัปของธนาคารขอให้กรอกหมายเลขบัญชีหรือหมายเลขบัตรรักษาความปลอดภัย
+    body_ko: >-
+      금융기관 팝업창에서 계좌번호나 보안카드 번호 등 금융거래정보 입력을
+      요구하면, 출처에 따르면 100% 보이스피싱입니다.
+    body_i18n:
+      en: >-
+        If a bank pop-up window asks you to enter financial transaction details such as
+        your account number or security card numbers, the source states this is 100%
+        voice phishing.
+      vi: >-
+        Nếu cửa sổ bật lên của ngân hàng yêu cầu nhập thông tin giao dịch tài chính như
+        số tài khoản hoặc số thẻ bảo mật, theo nguồn tin đây là lừa đảo 100%.
+      zh: >-
+        若金融机构弹窗要求输入账号或安全卡号码等金融交易信息，据来源所述，这 100% 是电信诈骗。
+      uz: >-
+        Agar bank qalqib chiquvchi oynasi hisob raqami yoki xavfsizlik karta raqami kabi
+        moliyaviy tranzaksiya ma'lumotlarini so'rasa, manbaga ko'ra bu 100% telefon
+        firibgarligidir.
+      th: >-
+        หากหน้าต่างป๊อปอัปของธนาคารขอให้กรอกข้อมูลธุรกรรมทางการเงิน เช่น หมายเลขบัญชี
+        หรือหมายเลขบัตรรักษาความปลอดภัย ตามแหล่งข้อมูลระบุว่านี่คือการหลอกลวงทางโทรศัพท์ 100%
+    evidence:
+      - doc_id: KOREA-PHISHING-GUIDE
+        publisher: 대한민국 정책브리핑
+        source_url: https://www.korea.kr/news/policyNewsView.do?newsId=148933209
+        published_at: null
+        verified_at: "2026-08-12"
+
+  - code: SMISHING_URL
+    certainty: warning
+    title_ko: 출처를 알 수 없는 문자·메시지의 URL
+    title_i18n:
+      en: A link in a text message from an unknown source
+      vi: Đường dẫn trong tin nhắn từ nguồn không xác định
+      zh: 来源不明的短信·消息中的链接
+      uz: Noma'lum manbadan kelgan xabardagi havola
+      th: ลิงก์ในข้อความจากแหล่งที่ไม่ทราบ
+    body_ko: >-
+      출처 불문하고 문자·메시지의 URL 은 클릭하지 않습니다.
+      모르는 택배 조회나 배송 주소 입력을 요구하는 문자가 대표적인 예입니다.
+    body_i18n:
+      en: >-
+        Do not click links in text messages regardless of the sender. A common example is
+        a message asking you to track an unexpected parcel or enter a delivery address.
+      vi: >-
+        Không nhấp vào đường dẫn trong tin nhắn bất kể người gửi là ai. Ví dụ phổ biến là
+        tin nhắn yêu cầu tra cứu bưu kiện lạ hoặc nhập địa chỉ giao hàng.
+      zh: >-
+        无论发件人是谁，都不要点击短信中的链接。要求查询不明快递或输入配送地址的短信是典型例子。
+      uz: >-
+        Jo'natuvchi kim bo'lishidan qat'i nazar, xabardagi havolalarni bosmang. Keng
+        tarqalgan misol — noma'lum pochta jo'natmasini tekshirish yoki yetkazib berish
+        manzilini kiritishni so'ragan xabar.
+      th: >-
+        อย่าคลิกลิงก์ในข้อความไม่ว่าผู้ส่งจะเป็นใคร ตัวอย่างที่พบบ่อยคือข้อความที่ขอให้
+        ตรวจสอบพัสดุที่ไม่รู้จักหรือกรอกที่อยู่จัดส่ง
+    evidence:
+      - doc_id: KOREA-PHISHING-GUIDE
+        publisher: 대한민국 정책브리핑
+        source_url: https://www.korea.kr/news/policyNewsView.do?newsId=148933209
+        published_at: null
+        verified_at: "2026-08-12"
+
+  - code: MALICIOUS_APP
+    certainty: warning
+    title_ko: 악성앱 스미싱 — 링크를 누르면 내 명의로 휴대폰이 개통된다
+    title_i18n:
+      en: Malicious-app smishing — tapping the link opens a new phone line in your name
+      vi: Smishing ứng dụng độc hại — nhấp vào liên kết sẽ mở thuê bao mới dưới tên bạn
+      zh: 恶意应用短信诈骗 — 点击链接后会以您的名义开通新手机号
+      uz: Zararli ilova smishingi — havolani bossangiz sizning nomingizga yangi raqam ochiladi
+      th: สมิชชิงแอปอันตราย — แตะลิงก์แล้วจะมีการเปิดเบอร์ใหม่ในชื่อคุณ
+    body_ko: >-
+      문자의 악성앱 링크를 누르면 피해자 명의로 신규 휴대폰이 개통되고
+      예금이나 대출금이 탈취됩니다. 최근 유행하는 수법으로 지목되었습니다.
+    body_i18n:
+      en: >-
+        Tapping a malicious-app link in a text message leads to a new phone line being
+        opened in the victim's name and deposits or loans being taken. It is identified
+        as a recently prevalent method.
+      vi: >-
+        Nhấp vào liên kết ứng dụng độc hại trong tin nhắn dẫn đến việc mở thuê bao điện
+        thoại mới dưới tên nạn nhân và chiếm đoạt tiền gửi hoặc khoản vay. Đây được xác
+        định là thủ đoạn phổ biến gần đây.
+      zh: >-
+        点击短信中的恶意应用链接，会以受害者名义开通新手机号，并盗取存款或贷款。这被指为近期流行的手法。
+      uz: >-
+        Xabardagi zararli ilova havolasini bosish jabrlanuvchi nomiga yangi telefon raqami
+        ochilishiga va omonat yoki kredit puli o'g'irlanishiga olib keladi. Bu so'nggi
+        paytda keng tarqalgan usul sifatida qayd etilgan.
+      th: >-
+        การแตะลิงก์แอปอันตรายในข้อความนำไปสู่การเปิดหมายเลขโทรศัพท์ใหม่ในชื่อของเหยื่อ
+        และการถูกขโมยเงินฝากหรือเงินกู้ ถูกระบุว่าเป็นวิธีที่แพร่หลายในช่วงหลัง
+    evidence:
+      - doc_id: FSC-2024-PHISHING-112
+        publisher: 금융위원회
+        source_url: https://www.fsc.go.kr/no010101/80830
+        published_at: null
+        verified_at: "2026-08-12"
+
+  - code: UNKNOWN_DEPOSIT
+    certainty: warning
+    title_ko: 통장에 모르는 돈이 입금되었다
+    title_i18n:
+      en: Money you do not recognise has been deposited into your account
+      vi: Có khoản tiền lạ được chuyển vào tài khoản của bạn
+      zh: 账户里收到了来路不明的钱
+      uz: Hisobingizga notanish pul tushdi
+      th: มีเงินที่คุณไม่รู้จักโอนเข้าบัญชี
+    body_ko: >-
+      모르는 돈이 입금되면 쓰지 말고 즉시 금융기관에 신고해 환급 절차를
+      진행합니다. 사기에 이용된 돈일 수 있습니다.
+    body_i18n:
+      en: >-
+        If money you do not recognise is deposited, do not use it — report it to your bank
+        immediately so the refund procedure can begin. It may be proceeds of fraud.
+      vi: >-
+        Nếu có khoản tiền lạ được chuyển vào, đừng sử dụng — hãy báo ngay cho ngân hàng để
+        bắt đầu thủ tục hoàn trả. Đó có thể là tiền do lừa đảo mà có.
+      zh: >-
+        若收到来路不明的钱，请勿使用，应立即向金融机构申报并进行退还程序。那可能是诈骗所得的资金。
+      uz: >-
+        Notanish pul tushsa, undan foydalanmang — qaytarish tartibi boshlanishi uchun
+        darhol bankingizga xabar bering. Bu firibgarlikdan olingan pul bo'lishi mumkin.
+      th: >-
+        หากมีเงินที่ไม่รู้จักโอนเข้ามา อย่าใช้ — แจ้งธนาคารทันทีเพื่อเริ่มขั้นตอนคืนเงิน
+        อาจเป็นเงินที่ได้มาจากการหลอกลวง
+    evidence:
+      - doc_id: KOREA-PHISHING-GUIDE
+        publisher: 대한민국 정책브리핑
+        source_url: https://www.korea.kr/news/policyNewsView.do?newsId=148933209
+        published_at: null
+        verified_at: "2026-08-12"
+
+  - code: FACE_TO_FACE
+    certainty: warning
+    title_ko: 사기범을 직접 만나 현금을 건네라고 한다 (대면편취형)
+    title_i18n:
+      en: You are told to hand cash to someone in person (face-to-face type)
+      vi: Bạn được yêu cầu giao tiền mặt trực tiếp cho ai đó (loại chiếm đoạt trực tiếp)
+      zh: 要求您当面把现金交给对方（当面骗取型）
+      uz: Sizdan naqd pulni shaxsan topshirish so'raladi (yuzma-yuz turi)
+      th: คุณถูกบอกให้ส่งเงินสดให้ใครบางคนด้วยตนเอง (แบบพบหน้า)
+    body_ko: >-
+      만나서 현금을 직접 전달하게 하는 대면편취형도 보이스피싱입니다.
+      2023-05-16 개정된 통신사기피해환급법 시행으로 대면편취형도 피해구제
+      대상에 포함되었습니다.
+    body_i18n:
+      en: >-
+        Being made to hand over cash in person is also voice phishing. Since the revised
+        Telecommunications Fraud Refund Act took effect on 2023-05-16, the face-to-face
+        type is also covered by the victim relief procedure.
+      vi: >-
+        Việc bị yêu cầu giao tiền mặt trực tiếp cũng là lừa đảo qua điện thoại. Kể từ khi
+        Luật hoàn trả thiệt hại lừa đảo viễn thông sửa đổi có hiệu lực ngày 2023-05-16,
+        loại chiếm đoạt trực tiếp cũng thuộc diện được cứu trợ.
+      zh: >-
+        当面交付现金的当面骗取型也是电信诈骗。自 2023-05-16 修订的《通信诈骗被害返还法》
+        施行起，当面骗取型也被纳入被害救济对象。
+      uz: >-
+        Naqd pulni shaxsan topshirishga majburlash ham telefon firibgarligidir. 2023-05-16
+        da kuchga kirgan Telekommunikatsiya firibgarligi qoplash to'g'risidagi qonun
+        tahriri bilan yuzma-yuz turi ham qoplash tartibiga kiritildi.
+      th: >-
+        การถูกบังคับให้ส่งมอบเงินสดด้วยตนเองก็เป็นการหลอกลวงทางโทรศัพท์เช่นกัน ตั้งแต่
+        กฎหมายคืนเงินความเสียหายจากการฉ้อโกงทางโทรคมนาคมฉบับแก้ไขมีผลเมื่อ 2023-05-16
+        แบบพบหน้าก็อยู่ในข่ายได้รับการเยียวยาด้วย
+    evidence:
+      - doc_id: FSC-PHISHING-FACE-TO-FACE
+        publisher: 금융위원회
+        source_url: https://www.fsc.go.kr/no010101/81090
+        published_at: null
+        verified_at: "2026-08-12"
+
+# ── 피해 발생 시 조치 순서 ───────────────────────────────────────────
+#
+# 출처가 명시한 순서 그대로다. 순서를 바꾸면 안 된다 — 지급정지가 가장 먼저인
+# 이유는 돈이 빠져나가는 것을 막는 것이 환급보다 앞서기 때문이다.
+response_steps:
+  - seq: 1
+    label_ko: 지급정지 신청 (금융회사)
+    label_i18n:
+      en: Request a payment suspension (your bank)
+      vi: Yêu cầu tạm dừng thanh toán (ngân hàng của bạn)
+      zh: 申请止付（金融机构）
+      uz: To'lovni to'xtatishni so'rang (bankingiz)
+      th: ขอระงับการจ่ายเงิน (ธนาคารของคุณ)
+  - seq: 2
+    label_ko: 피해 신고 (112)
+    label_i18n:
+      en: Report the crime (112)
+      vi: Trình báo vụ việc (112)
+      zh: 报案（112）
+      uz: Voqea haqida xabar bering (112)
+      th: แจ้งความ (112)
+  - seq: 3
+    label_ko: 피해금 환급 신청 (금융회사)
+    label_i18n:
+      en: Apply for a refund of the stolen funds (your bank)
+      vi: Nộp đơn xin hoàn trả số tiền bị chiếm đoạt (ngân hàng của bạn)
+      zh: 申请返还被害金（金融机构）
+      uz: O'g'irlangan mablag'ni qaytarishni so'rang (bankingiz)
+      th: ยื่นขอคืนเงินที่ถูกฉ้อโกง (ธนาคารของคุณ)
+response_evidence:
+  - doc_id: KOREA-PHISHING-GUIDE
+    publisher: 대한민국 정책브리핑
+    source_url: https://www.korea.kr/news/policyNewsView.do?newsId=148933209
+    published_at: null
+    verified_at: "2026-08-12"
+
+# ── 공식 연락처 ──────────────────────────────────────────────────────
+#
+# ★ 두 출처가 **다르게** 말한다. 둘 다 싣는다.
+#   KOREA-PHISHING-GUIDE      112 신고 / 1332 지급정지 / 118 스팸차단 으로 분리
+#   FSC-2024-PHISHING-112     112 로 일원화 — 한 번의 신고로 접수·악성앱 차단·지급정지
+#   나중 자료가 일원화를 말하므로 112 를 primary 로 두되, 개별 창구도 남긴다.
+#   한쪽만 싣고 다른 쪽이 맞으면 이용자가 전화를 두 번 건다.
+contacts:
+  - code: POLICE_112
+    number: "112"
+    org_ko: 경찰청
+    org_i18n: { en: Korean National Police Agency, vi: Cơ quan Cảnh sát Quốc gia Hàn Quốc,
+                zh: 韩国警察厅, uz: Koreya Milliy politsiya agentligi, th: สำนักงานตำรวจแห่งชาติเกาหลี }
+    role_ko: 피해 신고 — 사건접수·악성앱 차단·지급정지를 한 번에 처리
+    role_i18n:
+      en: Report the crime — case intake, malicious-app blocking and payment suspension in one call
+      vi: Trình báo — tiếp nhận vụ việc, chặn ứng dụng độc hại và tạm dừng thanh toán trong một cuộc gọi
+      zh: 报案 — 一次通话即可完成受理、恶意应用拦截和止付
+      uz: Xabar berish — bitta qo'ng'iroqda ish qabul qilinadi, zararli ilova bloklanadi va to'lov to'xtatiladi
+      th: แจ้งความ — รับเรื่อง บล็อกแอปอันตราย และระงับการจ่ายเงินในสายเดียว
+    primary: true
+    evidence:
+      - doc_id: FSC-2024-PHISHING-112
+        publisher: 금융위원회
+        source_url: https://www.fsc.go.kr/no010101/80830
+        published_at: null
+        verified_at: "2026-08-12"
+  - code: FSS_1332
+    number: "1332"
+    org_ko: 금융감독원
+    org_i18n: { en: Financial Supervisory Service, vi: Cơ quan Giám sát Tài chính,
+                zh: 金融监督院, uz: Moliyaviy nazorat xizmati, th: สำนักงานกำกับดูแลการเงิน }
+    role_ko: 지급정지
+    role_i18n: { en: Payment suspension, vi: Tạm dừng thanh toán,
+                 zh: 止付, uz: To'lovni to'xtatish, th: การระงับการจ่ายเงิน }
+    primary: false
+    evidence:
+      - doc_id: KOREA-PHISHING-GUIDE
+        publisher: 대한민국 정책브리핑
+        source_url: https://www.korea.kr/news/policyNewsView.do?newsId=148933209
+        published_at: null
+        verified_at: "2026-08-12"
+  - code: KISA_118
+    number: "118"
+    org_ko: 한국인터넷진흥원
+    org_i18n: { en: Korea Internet & Security Agency, vi: Cơ quan An ninh & Internet Hàn Quốc,
+                zh: 韩国互联网振兴院, uz: Koreya Internet va xavfsizlik agentligi, th: สำนักงานอินเทอร์เน็ตและความมั่นคงเกาหลี }
+    role_ko: 스팸 차단
+    role_i18n: { en: Spam blocking, vi: Chặn tin nhắn rác,
+                 zh: 垃圾信息拦截, uz: Spamni bloklash, th: การบล็อกสแปม }
+    primary: false
+    evidence:
+      - doc_id: KOREA-PHISHING-GUIDE
+        publisher: 대한민국 정책브리핑
+        source_url: https://www.korea.kr/news/policyNewsView.do?newsId=148933209
+        published_at: null
+        verified_at: "2026-08-12"

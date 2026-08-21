@@ -156,7 +156,7 @@ class TestStream:
 
     def test_invalid_language_is_rejected(self, client):
         assert client.post("/api/v1/guide/limit-release",
-                           json={"lang": "th"}).status_code == 422
+                           json={"lang": "de"}).status_code == 422
 
     def test_invalid_visa_is_rejected(self, client):
         assert client.post("/api/v1/guide/limit-release",
