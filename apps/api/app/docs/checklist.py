@@ -21,6 +21,7 @@ from app.matrix.service import resolve_docs
 from app.schemas.checklist import ChecklistResponse, ChecklistSection
 from app.schemas.common import EvidenceStatus, Lang, Tier
 from app.schemas.institution import MatrixEvidence
+from app.util.i18n_text import localized
 
 log = logging.getLogger(__name__)
 
@@ -83,22 +84,10 @@ def _status(value: str) -> EvidenceStatus:
     return EvidenceStatus(value)
 
 
-def _localized(block: dict, stem: str, lang: Lang) -> str:
-    """`{stem}_i18n[lang]` → `{stem}_ko` 폴백.
-
-    ★ 여기서 폴백이 일어나면 **한국어를 못 읽는 이용자에게 한국어가 보인다.**
-    주의문구가 그렇게 되면 "예시일 뿐이고 은행마다 다르다"는 경고 자체가
-    전달되지 않으므로, 카탈로그에 3언어를 채우는 것이 원칙이다.
-    """
-    source = (block.get(f"{stem}_ko") or "").strip()
-    if lang is Lang.KO or not source:
-        return source
-    translated = (block.get(f"{stem}_i18n") or {}).get(lang.value)
-    if translated:
-        return translated.strip()
-    log.warning("%s_i18n 에 %s 가 없어 한국어로 폴백한다 — 번역을 채워야 한다",
-                stem, lang.value)
-    return source
+# `_localized` 는 `app.util.i18n_text.localized` 로 옮겼다 — F8 도 같은 규칙을
+# 읽으므로 사본을 두면 번역 누락 경고가 한쪽에만 남는다. 호출부를 바꾸지 않으려고
+# 이름만 여기 묶어 둔다.
+_localized = localized
 
 
 def _section(key: str, block: dict, lang: Lang, caveat_block: dict | None = None) -> ChecklistSection:

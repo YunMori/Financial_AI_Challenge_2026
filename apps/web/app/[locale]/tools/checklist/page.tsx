@@ -8,6 +8,7 @@ import {
   checklistParamsFrom,
   downloadChecklistPdf,
   fetchChecklist,
+  isAbortError,
   type ChecklistParams,
   type ChecklistResponse,
 } from "@/lib/api";
@@ -50,7 +51,12 @@ export default function ChecklistPage({
     });
     setReq(p);
     const ac = new AbortController();
-    fetchChecklist(p, ac.signal).then(setDoc).catch(() => setError(true));
+    // F2 와 같은 이유다 — 새 조회는 지난 실패를 지우고, 취소는 실패로 세지
+    // 않는다(`isAbortError`).
+    setError(false);
+    fetchChecklist(p, ac.signal)
+      .then(setDoc)
+      .catch((e) => { if (!isAbortError(e)) setError(true); });
     return () => ac.abort();
   }, [locale, query.visa, query.purpose]);
 

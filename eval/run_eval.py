@@ -209,8 +209,9 @@ def build_pipeline(no_llm: bool, no_generation: bool = False):
     from app.rag.retrieve import get_retriever
 
     s = get_settings()
-    # 로컬 백엔드는 키가 필요 없다 — `llm_enabled` 로 막으면 안 된다.
-    if no_llm or (s.llm_backend == "anthropic" and not s.llm_enabled):
+    # 로컬 백엔드는 키가 필요 없다. 그 규칙은 `generation_enabled` 하나가 갖는다 —
+    # 여기서 백엔드를 다시 분기하면 설정과 평가기가 어긋날 수 있다.
+    if no_llm or not s.generation_enabled:
         if not no_llm:
             print("★ ANTHROPIC_API_KEY 가 없어 --no-llm 으로 진행합니다.\n"
                   "  로컬 모델을 쓰려면 LLM_BACKEND=local 로 두세요.\n"

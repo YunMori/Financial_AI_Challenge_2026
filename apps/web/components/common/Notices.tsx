@@ -4,6 +4,8 @@
  * **레이아웃에 박는다.** 나중에 붙이면 반드시 빠진다. 기획서 15장(규제 준수)이
  * UI 요건으로 번역된 것이므로 화면마다 조건부로 넣으면 안 된다.
  */
+import Link from "next/link";
+
 import { t } from "@/lib/i18n";
 
 /** 화면 상단 상시 배너 — 오안내 손해 대응 */
@@ -46,6 +48,16 @@ export function AntiPhishingNotice({ locale }: { locale: string }) {
           <span className="font-mono">
             {domain || t(locale, "legal.domainUnset")}
           </span>
+        </p>
+        {/* 약관은 링크가 없으면 없는 것과 같다 (planner §8.4). 고지와 같은
+            자리에 두어 모든 화면에서 닿게 한다. */}
+        <p className="pt-0.5">
+          <Link
+            href={`/${locale}/terms`}
+            className="text-xs text-blue-700 underline underline-offset-2"
+          >
+            {t(locale, "terms.title")}
+          </Link>
         </p>
       </div>
     </section>
