@@ -80,16 +80,41 @@ else
     echo "  (계획) 키페어 ${KEY_NAME} 생성 → ~/.ssh/${KEY_NAME}.pem"
 fi
 
+# ── 서브넷 ───────────────────────────────────────────────────────────
+# ★ **AZ 를 고정해야 한다.** 서브넷을 주지 않으면 EC2 가 기본 서브넷 중 하나를
+#   임의로 고르는데, GPU 타입은 AZ 를 가린다 — 실측 2026-09-07 기준 서울에서
+#   g6.xlarge 는 2a·2c·2d 에만 있고 **2b 에는 없다.** 2b 가 잡히면
+#   `Unsupported` 로 죽는다. 타입을 제공하는 AZ 에서 골라 명시한다.
+echo
+echo "서브넷 — $INSTANCE_TYPE 를 제공하는 AZ 에서 고른다"
+AZS=$(aws ec2 describe-instance-type-offerings --region "$REGION" \
+    --location-type availability-zone \
+    --filters "Name=instance-type,Values=${INSTANCE_TYPE}" \
+    --query 'InstanceTypeOfferings[].Location' --output text)
+[[ -z "$AZS" ]] && { echo "✗ $REGION 에 $INSTANCE_TYPE 를 제공하는 AZ 가 없다." >&2; exit 1; }
+echo "  가능한 AZ: $AZS"
+SUBNET_ID=""
+for az in $AZS; do
+    SUBNET_ID=$(aws ec2 describe-subnets --region "$REGION" \
+        --filters "Name=availability-zone,Values=$az" "Name=default-for-az,Values=true" \
+        --query 'Subnets[0].SubnetId' --output text 2>/dev/null || true)
+    [[ -n "$SUBNET_ID" && "$SUBNET_ID" != "None" ]] && { AZ_PICKED=$az; break; }
+    SUBNET_ID=""
+done
+[[ -z "$SUBNET_ID" ]] && { echo "✗ 쓸 수 있는 기본 서브넷이 없다." >&2; exit 1; }
+echo "  → $SUBNET_ID ($AZ_PICKED)"
+
 # ── 인스턴스 ─────────────────────────────────────────────────────────
 # 루트 볼륨을 크게 잡는다. GPU 이미지(torch cu13 + onnxruntime-gpu + nvidia
 # 런타임 ~1.5GB + 임베딩 모델 2.2GB)만으로 10GB 를 넘고, 가중치 8.43GB 와
 # HF 캐시(원본 10GB)가 그 위에 얹힌다. 기본 8GB 로는 빌드 중에 디스크가 찬다.
 echo
-echo "인스턴스 생성 — $INSTANCE_TYPE / $AMI_ID / ${VOLUME_GB}GB"
+echo "인스턴스 생성 — $INSTANCE_TYPE / $AMI_ID / ${VOLUME_GB}GB / $AZ_PICKED"
 if [[ $APPLY -eq 1 ]]; then
     IID=$(aws ec2 run-instances --region "$REGION" \
         --image-id "$AMI_ID" --instance-type "$INSTANCE_TYPE" \
         --key-name "$KEY_NAME" --security-group-ids "$SG_ID" \
+        --subnet-id "$SUBNET_ID" --associate-public-ip-address \
         --block-device-mappings "DeviceName=/dev/sda1,Ebs={VolumeSize=${VOLUME_GB},VolumeType=gp3,DeleteOnTermination=true}" \
         --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=${NAME}}]" \
         --query 'Instances[0].InstanceId' --output text)
