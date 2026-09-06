@@ -52,8 +52,14 @@ RUN pip install --no-cache-dir torch~=2.13 --index-url https://download.pytorch.
 
 # ★ 임베딩 모델을 빌드 타임에 내려받는다. 이 줄이 없으면 첫 요청이
 # 모델 다운로드(2.2GB)를 기다리고, 심사위원이 처음 접속했을 때 그 일이 벌어진다.
+#   ★★ `cache_dir` 를 **런타임과 같은 값으로 넘겨야 한다.** 생략하면 fastembed
+#      기본 위치에 받는데, 앱은 `settings.embed_cache_path`(=/app/data/embed_cache)
+#      를 넘겨 조회한다(`app/rag/embed.py:142`). 경로가 어긋나면 빌드 타임에 구운
+#      것을 **런타임이 못 찾아 2.1GB 를 다시 받는다** — 이 줄이 막으려던 일이
+#      그대로 일어난다. 실측 2026-09-07: 컨테이너 기동마다 재다운로드.
 RUN python -c "from fastembed import TextEmbedding; \
-    import os; TextEmbedding(model_name=os.environ['EMBED_MODEL'])"
+    import os; TextEmbedding(model_name=os.environ['EMBED_MODEL'], \
+                             cache_dir='/app/data/embed_cache')"
 
 # 인덱스는 빌드 타임에 만들어 동봉한다 (Chroma + BM25).
 # 없으면 /healthz 의 index_present 가 false 로 뜨고 검색이 폴백된다.
