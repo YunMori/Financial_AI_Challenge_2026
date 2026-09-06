@@ -2,7 +2,12 @@
 #
 # K-Buddy — EC2 인스턴스 초기 구성 (Ubuntu 22.04/24.04 · NVIDIA 드라이버 포함 AMI)
 #
-#   sudo bash deploy/bootstrap.sh
+#   sudo bash deploy/bootstrap.sh            # GPU (기본)
+#   sudo MODE=cpu bash deploy/bootstrap.sh   # CPU 스테이징 (쿼터 승인 전)
+#
+# MODE=cpu 는 드라이버·툴킷·가중치 단계를 통째로 건너뛰고 생성을 Anthropic API
+# 로 보낸다. 배선(nginx·SSE·레이트리밋·인덱스)을 시간당 $1 장비가 아니라
+# 시간당 몇 원짜리에서 먼저 검증하기 위한 임시 경로다 — deploy/README.md 참조.
 #
 # 멱등하게 짰다. 중간에 끊기면 그대로 다시 돌리면 된다 — 이미 끝난 단계는
 # 건너뛴다. 각 단계가 **왜** 필요한지는 해당 위치 주석에 있다.
@@ -15,6 +20,13 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MODELS_HOST_DIR=/opt/kbuddy/models
+MODE="${MODE:-gpu}"
+case "$MODE" in
+    gpu) COMPOSE_FILE=docker-compose.yml ;;
+    cpu) COMPOSE_FILE=docker-compose.cpu.yml ;;
+    *)   echo "MODE 는 gpu 또는 cpu 다 (받은 값: $MODE)" >&2; exit 1 ;;
+esac
+echo "모드: $MODE  ($COMPOSE_FILE)"
 STEP=0
 step() { STEP=$((STEP+1)); printf '\n\033[1m[%d] %s\033[0m\n' "$STEP" "$*"; }
 
@@ -22,6 +34,7 @@ step() { STEP=$((STEP+1)); printf '\n\033[1m[%d] %s\033[0m\n' "$STEP" "$*"; }
 # 드라이버는 이 스크립트가 설치하지 않는다. AMI 가 가진 것을 쓴다 —
 # 드라이버 설치는 재부팅과 커널 모듈이 얽혀 있어, 실패하면 원인이 배포
 # 스크립트인지 AMI 인지 구분되지 않는다. DLAMI 를 쓰라는 이유가 이것이다.
+if [[ "$MODE" == "gpu" ]]; then
 step "NVIDIA 드라이버 확인"
 if ! command -v nvidia-smi >/dev/null 2>&1; then
     echo "✗ nvidia-smi 가 없다. GPU 드라이버가 포함된 AMI(Deep Learning Base OSS" >&2
@@ -50,13 +63,24 @@ fi
 # 컨테이너가 실제로 GPU 를 보는지 **여기서** 확인한다. 뒤로 미루면 이미지를
 # 20분 빌드한 뒤에 알게 된다.
 docker run --rm --gpus all nvidia/cuda:13.0.0-base-ubuntu22.04 nvidia-smi -L
+else
+step "Docker (CPU 모드 — 드라이버·툴킷 건너뜀)"
+command -v docker >/dev/null 2>&1 || curl -fsSL https://get.docker.com | sh
+fi
 
 # ── 3. .env ──────────────────────────────────────────────────────────
 step ".env 확인"
 if [[ ! -f "$REPO_ROOT/.env" ]]; then
     cp "$REPO_ROOT/.env.example" "$REPO_ROOT/.env"
-    echo "⚠ .env 를 .env.example 에서 만들었다. LLM_BACKEND=local 경로는 API 키가"
-    echo "  필요 없지만, CORS_ORIGINS 등은 확인하는 편이 좋다."
+    echo "⚠ .env 를 .env.example 에서 만들었다."
+fi
+if [[ "$MODE" == "cpu" ]] && ! grep -qE '^ANTHROPIC_API_KEY=.+' "$REPO_ROOT/.env"; then
+    # CPU 모드는 생성을 Anthropic 으로 보내므로 키가 **반드시** 있어야 한다.
+    # 없으면 기동은 되지만 모든 답변이 폴백으로 떨어져, 배선 검증이라는
+    # 목적 자체가 무의미해진다. 여기서 멈추는 편이 낫다.
+    echo "✗ MODE=cpu 인데 .env 에 ANTHROPIC_API_KEY 가 비어 있다." >&2
+    echo "  이 경로는 생성을 API 로 보내므로 키가 없으면 전부 폴백된다." >&2
+    exit 1
 fi
 
 # ── 4. 검색 인덱스 재생성 ────────────────────────────────────────────
@@ -85,6 +109,7 @@ fi
 # `--stage textonly` 는 비전 타워(0.667GB)와 MTP 헤드(0.241GB)를 떼어 낸다.
 # 무손실이다 — 2026-08-18 실측 로짓 최대차 0, 로드 28 → 17초.
 # meta device 로 조립하므로 GPU 없이 돈다.
+if [[ "$MODE" == "gpu" ]]; then
 step "가중치 (Qwen3.5-4B → textonly 8.43GB)"
 mkdir -p "$MODELS_HOST_DIR"
 if [[ -f "$MODELS_HOST_DIR/qwen35-4b-textonly/config.json" ]]; then
@@ -105,15 +130,16 @@ else
                --stage textonly --out /out/qwen35-4b-textonly
 fi
 du -sh "$MODELS_HOST_DIR"/* 2>/dev/null || true
+fi
 
 # ── 6. 기동 ──────────────────────────────────────────────────────────
 step "컨테이너 기동"
 cd "$REPO_ROOT/deploy"
-docker compose up -d --build
+docker compose -f "$COMPOSE_FILE" up -d --build
 
 echo
 echo "── 확인 ───────────────────────────────────────────────────────"
 echo "  curl -s localhost/healthz | python3 -m json.tool"
-echo "  docker compose -f $REPO_ROOT/deploy/docker-compose.yml logs -f api"
+echo "  docker compose -f $REPO_ROOT/deploy/$COMPOSE_FILE logs -f api"
 echo
 echo "  index_present 와 llm_configured 가 둘 다 true 여야 한다."

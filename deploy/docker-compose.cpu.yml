@@ -1,0 +1,81 @@
+# K-Buddy — CPU 스테이징 (쿼터 승인 전 임시)
+#
+#   cd deploy && docker compose -f docker-compose.cpu.yml up -d --build
+#
+# ★ **임시 구성이다.** 생성이 Anthropic API 로 나가므로 ADR-004 의 "외부로
+#   나가는 것이 없다"가 이 배포에는 성립하지 않는다. ADR-002 의 원래 서술로
+#   돌아간 상태이며, G 인스턴스 쿼터가 승인되면 GPU 인스턴스를 따로 띄우고
+#   이쪽을 내린다. **ADR 을 고치지 않는다** — 노선이 바뀐 것이 아니다.
+#
+# 왜 override(`-f a -f b`)가 아니라 별도 파일인가: compose 의 병합은 덧붙이기라
+# GPU 판의 `deploy.resources.reservations.devices` 를 **지울 수 없다.** CPU
+# 인스턴스에서 그것이 남으면 기동이 실패한다. `Dockerfile` 을 빌드 인자로
+# 가르지 않은 것과 같은 이유다 — 어느 쪽으로 떴는지가 파일 밖에서 보이지 않으면
+# 안 된다.
+#
+# web·nginx 정의는 GPU 판과 같다. 두 파일이 갈리지 않게 함께 고친다.
+
+name: kbuddy
+
+services:
+  api:
+    build:
+      context: ..
+      # CPU 이미지. torch 가 CPU 휠이라 로컬 생성은 쓸 수 없다.
+      dockerfile: apps/api/Dockerfile
+    image: kbuddy-api:cpu
+    restart: unless-stopped
+    expose:
+      - "10000"
+    env_file:
+      - ../.env
+    environment:
+      # ★ 이 한 줄이 GPU 판과의 유일한 실질적 차이다.
+      #   CPU 에서 4B 를 돌리면 fp32 로 떨어져 사실상 멈춘 것처럼 보인다
+      #   (requirements.txt 헤더가 적어 둔 그대로다).
+      LLM_BACKEND: anthropic
+      # nginx 컨테이너의 고정 주소. GPU 판과 같은 값을 유지한다.
+      FORWARDED_ALLOW_IPS: 172.28.0.10
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request;urllib.request.urlopen('http://127.0.0.1:10000/healthz',timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      # 모델 적재가 없어 GPU 판(180s)보다 짧아도 된다. 임베딩 로드만 ~4초.
+      start_period: 60s
+    networks:
+      kbuddy:
+
+  web:
+    build:
+      context: ../apps/web
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_BASE: /api/v1
+    image: kbuddy-web:latest
+    restart: unless-stopped
+    expose:
+      - "3000"
+    networks:
+      kbuddy:
+
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - api
+      - web
+    networks:
+      kbuddy:
+        ipv4_address: 172.28.0.10
+
+networks:
+  kbuddy:
+    ipam:
+      config:
+        - subnet: 172.28.0.0/24

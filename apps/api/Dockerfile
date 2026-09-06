@@ -62,4 +62,15 @@ COPY apps/api/app/ ./app/
 # 배포 환경이 PORT 를 주입하면 그것을 쓴다. 없으면 10000.
 ENV PORT=10000
 EXPOSE 10000
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT}"]
+
+# ★ `--proxy-headers --forwarded-allow-ips` 가 **레이트리밋의 전제다.**
+#   slowapi 의 `get_remote_address` 는 `request.client.host` 를 본다. nginx 뒤에
+#   두면 그 값이 프록시 IP 로 고정돼 **전 이용자가 분당 20회 한 버킷을 공유**한다
+#   (planner §9.1 이 "IP당" 이라고 못박은 것이 조용히 깨진다).
+#   `Dockerfile.gpu` 와 **같은 값을 유지한다** — 두 이미지가 갈리면 CPU 배포에서만
+#   한도가 새는 형태가 된다.
+#
+#   기본값 127.0.0.1 은 uvicorn 의 기본과 같아 단독 실행(CI·테스트)에서는
+#   동작이 바뀌지 않는다. 프록시를 붙일 때 compose 가 그 주소를 준다.
+ENV FORWARDED_ALLOW_IPS=127.0.0.1
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT} --proxy-headers --forwarded-allow-ips ${FORWARDED_ALLOW_IPS}"]
