@@ -2107,3 +2107,73 @@ AMI 는 `ami-0998eac84900cf563`(DL Base OSS Nvidia Driver GPU · Ubuntu 22.04 ·
 
 > 루트 계정 액세스 키를 쓰고 있다. 배포 후 IAM 사용자로 옮기고 루트 키를
 > 비활성화한다.
+
+## 2026-09-07 (이어서) — CPU 스테이징을 실제로 띄웠다: 세 가지가 걸렸다
+
+`m7i-flex.large`(2vCPU/8GB, ap-northeast-2d, `i-0007a9eb3cf2705ac`)에 배선을
+올렸다. 목적은 GPU 고유가 아닌 부분을 시간당 $1 장비 이전에 걸러내는 것이었고,
+**실제로 세 개가 걸렸다.**
+
+### ⓪ 계정이 AWS 무료 플랜이다 — G 쿼터가 0 이었던 진짜 이유 ★
+
+`t3.large` 로 `run-instances` 하니
+`InvalidParameterCombination: The specified instance type is not eligible for
+Free Tier` 가 났다. 이 계정은 **무료 플랜이라 무료 티어 대상 타입만 띄울 수
+있다.** G 온디맨드·스팟이 서울·도쿄·버지니아·오레곤·싱가포르 **전 리전에서
+0** 이었던 것도 쿼터 정책이 아니라 이것 때문이다.
+
+→ **유료 플랜 전환이 GPU 의 선행 조건이다.** 제출해 둔 쿼터 증설(8 vCPU)은
+그 전에는 승인될 이유가 없다. 무료 티어 대상 중 메모리가 가장 큰
+`m7i-flex.large`(8GB)로 스테이징을 진행했다.
+
+### ① 빈 `public/` 이 새 체크아웃에서 web 빌드를 죽인다 (수정 완료)
+
+`apps/web/public` 이 비어 있고 git 은 빈 디렉터리를 추적하지 않는다. 로컬
+작업 트리에는 폴더가 보이므로 재현되지 않고, clone 한 곳에서만
+`COPY --from=builder /app/public`: `not found` 로 죽는다. builder 단계에서
+`mkdir -p` 로 보장했다. **이 프로젝트가 세 번째로 겪은 "배포에서만" 사고다.**
+
+### ② 레이트리밋이 아예 걸려 있지 않다 ★
+
+`main.py` 가 `Limiter` 를 만들고 `app.state.limiter` 와 예외 핸들러까지
+등록해 두었는데, **`@limiter.limit(...)` 이 어느 라우트에도 붙어 있지 않다.**
+`settings.rate_limit_per_min`(20)은 코드 어디에서도 읽히지 않는다.
+
+실측: `/api/v1/institutions` 를 연속 24회 호출 — 전부 200. 위조한
+`X-Forwarded-For: 1.2.3.4` 도 그냥 통과한다(막을 것이 없으니).
+
+planner §9.1 의 "IP당 분 20회"가 **선언만 있고 구현이 없다.**
+
+> 프록시 뒤에서 원 IP 를 잃는 문제(같은 날 앞 절)를 고친 것은 여전히 유효하다.
+> 로그가 `110.15.186.199` 를 찍는다 — `172.28.0.x` 가 아니다. 한도를 붙일 때
+> 그 값이 올바르게 들어갈 자리가 준비된 것이고, 순서가 반대였으면
+> **한도를 붙이자마자 전 이용자 공용 버킷이 됐을 것이다.**
+
+### ③ `.env` 의 키가 문자열 `"None"` 이다 — healthz 가 거짓말을 한다
+
+생성이 전부 `upstream_error` 로 폴백했다. 로그는 `AuthenticationError`.
+`.env` 의 `ANTHROPIC_API_KEY` 값이 4자짜리 문자열 `None` 이었다 —
+`50854e9`(자리 이동 백업) 무렵 실키가 빠진 것으로 보인다.
+
+문제는 그 다음이다. `generation_enabled` 는 `bool(self.anthropic_api_key)` 를
+보므로 **`"None"` 도 참이다.** `/healthz` 가 `llm_configured: true` 를
+보고하는데 실제로는 모든 생성이 실패한다. 운영에서 헬스체크는 "생성이 죽었다"
+로 읽히는 신호라고 `config.py` 가 스스로 적어 두었는데, **그 신호가 거짓이다.**
+
+### 동작을 확인한 것
+
+| 항목 | 결과 |
+|---|---|
+| 컨테이너 3종 | api(healthy)·web·nginx 기동 |
+| `/healthz` (외부) | `status ok · index_present true` |
+| 프런트 `/ko` | HTTP 200 · 0.13s |
+| 계층 C 선판정 | `latency_ms: 0` — 규칙이 LLM 전에 차단 ✅ |
+| 검색 | tier A · top1 0.850 · 후보 27건 ✅ |
+| SSE | `meta → token → invalidate → citations → done` 순서대로 도착 ✅ |
+| 원 IP 보존 | 로그에 `110.15.186.199` ✅ |
+
+지연은 `meta` 까지 28.9초다. 2 vCPU CPU 에서 e5-large 임베딩을 돌리기
+때문이며 GPU 판정과 무관한 값이다.
+
+> 인스턴스는 과금 중이다. `aws ec2 stop-instances --region ap-northeast-2
+> --instance-ids i-0007a9eb3cf2705ac`
