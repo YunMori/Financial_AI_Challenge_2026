@@ -63,7 +63,7 @@ class FakeLLM:
         self._answer = answer or LLMAnswer(
             answer="한도제한계좌의 이체 한도는 100만원입니다.",
             tier=Tier.A,
-            citations=[Citation(ref=1, used_for="한도")],
+            citations=[Citation(ref=1)],
             numbers_used=["100만원"],
         )
         self._error = error
@@ -193,7 +193,7 @@ class TestOutputGuardrail:
     async def test_hallucinated_number_becomes_fallback(self):
         """★ 스트리밍 중에는 흘러나가지만 최종은 폴백이어야 한다."""
         bad = LLMAnswer(answer="한도는 500만원입니다", tier=Tier.A,
-                        citations=[Citation(ref=1, used_for="x")],
+                        citations=[Citation(ref=1)],
                         numbers_used=["500만원"])
         events = await collect(pipeline(llm=FakeLLM(answer=bad)))
         assert any(e.kind == "token" for e in events), "토큰은 흘렀어야 한다"
@@ -201,7 +201,7 @@ class TestOutputGuardrail:
 
     async def test_phantom_citation_becomes_fallback(self):
         bad = LLMAnswer(answer="본문", tier=Tier.A,
-                        citations=[Citation(ref=9, used_for="x")], numbers_used=[])
+                        citations=[Citation(ref=9)], numbers_used=[])
         events = await collect(pipeline(llm=FakeLLM(answer=bad)))
         assert events[-1].response.fallback_reason is FallbackReason.PHANTOM_CITATION
 
@@ -282,7 +282,7 @@ class TestSSEEndpoint:
         import app.routers.chat as chat_router
 
         bad = LLMAnswer(answer="한도는 500만원입니다", tier=Tier.A,
-                        citations=[Citation(ref=1, used_for="x")],
+                        citations=[Citation(ref=1)],
                         numbers_used=["500만원"])
         monkeypatch.setattr(chat_router, "_pipeline", pipeline(llm=FakeLLM(answer=bad)))
 
@@ -303,5 +303,5 @@ class TestSSEEndpoint:
         assert dict(parsed)["done"]["tier"] == "C"
 
     def test_rejects_unsupported_language(self, client):
-        r = client.post("/api/v1/chat", json={"lang": "th", "message": "질문"})
+        r = client.post("/api/v1/chat", json={"lang": "de", "message": "질문"})
         assert r.status_code == 422

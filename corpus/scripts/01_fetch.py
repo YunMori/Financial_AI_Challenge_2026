@@ -126,7 +126,14 @@ def main() -> int:
             "publisher": src.publisher,
             "publisher_type": src.publisher_type,
             "doc_type": src.doc_type,
-            "published_at": src.published_at,
+            # ★ `verified_at` 과 같은 이유로 **덮어쓰지 않는다.**
+            #   `published_at` 은 sources.yaml 에 없는 문서가 많고(원문에 발행일이
+            #   표기되지 않은 경우), 그때는 02_clean 의 front-matter 검수에서
+            #   사람이 채워 매니페스트에만 남는다. `src.published_at`(=None)으로
+            #   그냥 덮으면 그 값이 조용히 사라지고 **시점 경고(§8.4)의 입력이
+            #   없어진다** — 화면에는 여전히 "확인 2026-08-12"가 붙은 채로.
+            #   실측 2026-08-21: `--verify` 한 번에 13개 문서의 발행일이 날아갔다.
+            "published_at": src.published_at or prev.get("published_at"),
             "topics": src.topics,
             "visa_scope": src.visa_scope,
             "priority": src.priority,
@@ -140,7 +147,11 @@ def main() -> int:
             **meta,
         }
 
-    save_manifest(manifest)
+    # ★ `--verify` 는 **읽기 전용이다.** 문서에 "받지 않고 해시만 대조"라고
+    #   적어 두고 매니페스트를 덮어쓰고 있었다 — 점검하려고 돌린 명령이 데이터를
+    #   바꾸면 그건 점검이 아니다(실측 2026-08-21: 발행일 13건 손실).
+    if not args.verify:
+        save_manifest(manifest)
 
     print(f"\n수집 {fetched}건 · 건너뜀 {skipped}건 · 실패 {len(failed)}건")
     if changed:

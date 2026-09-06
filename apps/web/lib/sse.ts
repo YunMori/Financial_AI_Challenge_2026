@@ -10,9 +10,18 @@
  * 한다. 이 처리를 빠뜨리면 서버는 "차단했다"고 하는데 화면엔 환각이 남는다.
  */
 
+import { API_BASE } from "./api";
 import type { SessionContext } from "./session";
 
 export type Tier = "A" | "B" | "C";
+
+/** 답변 뒤에 이어지는 행동 제안 (F4 → F3). **서버가 결정한다.** */
+export interface NextAction {
+  type: "checklist";
+  /** 문구는 클라이언트가 갖는다 — 서버가 3언어를 또 들고 있지 않는다 */
+  label_key: string;
+  params: Record<string, string>;
+}
 
 export interface EvidenceRef {
   ref: number;
@@ -31,19 +40,47 @@ export interface ChatCallbacks {
   onCitations?: (items: EvidenceRef[]) => void;
   /** 표시된 텍스트를 이 문구로 **교체**하라 */
   onInvalidate?: (p: { reason: string; fallback_text: string; contacts: string[] }) => void;
-  onDone?: (d: { tier: Tier; latency_ms: number; fallback_reason: string | null }) => void;
+  onDone?: (d: {
+    tier: Tier;
+    latency_ms: number;
+    fallback_reason: string | null;
+    /** 폴백일 때는 서버가 붙이지 않는다 — 답한 척이 되므로 */
+    next_action?: NextAction | null;
+  }) => void;
   onError?: (e: unknown) => void;
 }
-
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8000/api/v1";
 
 export async function streamChat(
   body: { lang: string; message: string; context: SessionContext; history: unknown[] },
   cb: ChatCallbacks,
   signal?: AbortSignal,
 ): Promise<void> {
+  return stream("/chat", body, cb, signal);
+}
+
+/**
+ * F4 한도제한계좌 해제 가이드.
+ *
+ * `/chat` 과 **같은 이벤트 스트림**이다. 서버가 프로필로 한국어 질의를
+ * 조립하므로 클라이언트는 질문 문장을 만들지 않는다 — 검색어 규칙이 두 곳에
+ * 생기는 것을 막는다.
+ */
+export async function streamGuide(
+  body: { lang: string; context: SessionContext },
+  cb: ChatCallbacks,
+  signal?: AbortSignal,
+): Promise<void> {
+  return stream("/guide/limit-release", body, cb, signal);
+}
+
+async function stream(
+  path: string,
+  body: { lang: string } & Record<string, unknown>,
+  cb: ChatCallbacks,
+  signal?: AbortSignal,
+): Promise<void> {
   try {
-    const res = await fetch(`${API_BASE}/chat`, {
+    const res = await fetch(`${API_BASE}${path}`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-KB-Lang": body.lang },
       body: JSON.stringify(body),

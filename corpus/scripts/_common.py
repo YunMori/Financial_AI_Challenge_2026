@@ -53,10 +53,35 @@ ALLOWED_HOSTS: frozenset[str] = frozenset({
 })
 
 # 국내 금융기관 공식 도메인. 각 사 공지·약관 페이지를 근거로 쓸 때만 사용한다.
+#
+# ★★ **이 목록은 화이트리스트이자 사칭 방어다.** 도메인 하나를 잘못 넣으면
+#    사칭 사이트가 "1차 출처"로 코퍼스에 들어온다 — planner §11 의 지식베이스
+#    오염이 바로 이 경로다. 그래서 **기억이나 추측으로 추가하지 않는다.**
+#
+#    아래 4곳(2026-08-21 추가)은 **EV 인증서의 조직명·법인등록번호로 확인**했다.
+#    EV 는 CA 가 법적 실체를 검증해야 발급되므로, 도메인 소유자가 그 은행이라는
+#    독립적 근거가 된다. 확인 방법(재현 가능):
+#
+#        echo | openssl s_client -connect www.<도메인>:443 -servername www.<도메인> \
+#          | openssl x509 -noout -subject -issuer
+#
+#      busanbank.co.kr   O=Busan Bank Co., Ltd.    법인 180111-0002997  DigiCert EV
+#      jbbank.co.kr      O=THE JEONBUK BANK LTD    법인 210111-0000043  GlobalSign EV
+#      jejubank.co.kr    O=JEJU BANK Co., Ltd      사업자 616-81-00615  Thawte EV
+#      imbank.co.kr      O=iM Bank                 법인 170111-0000141  GlobalSign EV
+#
+#    ★ `dgb.co.kr` 은 `imbank.co.kr` 과 **같은 인증서**를 제시한다(CN=www.imbank.co.kr,
+#      O=iM Bank). 대구은행 → iM뱅크 사명 변경의 흔적이며 같은 주체다. 구주소로
+#      남은 링크를 받을 수 있게 함께 넣는다.
 ALLOWED_INSTITUTION_HOSTS: frozenset[str] = frozenset({
     "kbstar.com", "shinhan.com", "shinhanbank.com", "wooribank.com",
     "kebhana.com", "hanabank.com", "nonghyup.com", "nhbank.com",
     "ibk.co.kr", "standardchartered.co.kr", "citibank.co.kr",
+    # 2026-08-21 추가 — F2 매트릭스의 나머지 4개 은행 (EV 인증서로 확인)
+    "imbank.co.kr", "dgb.co.kr",   # iM뱅크(구 대구은행)
+    "busanbank.co.kr",             # 부산은행
+    "jbbank.co.kr",                # 전북은행
+    "jejubank.co.kr",              # 제주은행
 })
 
 

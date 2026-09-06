@@ -95,8 +95,9 @@ class Settings(BaseSettings):
     #   aisingapore/Qwen-SEA-LION-v4-4B-VL  ~8GB   Sailor2 가 이겼을 때만 (VL 주의)
     #   Qwen/Qwen3.5-9B                     ~19GB  1차 전원 미달 시 승격
     #
-    # 확정은 AWS GPU 실측 후 ADR-004. 지금 값은 **MPS 에 올릴 수 있는 유일한 후보**다
-    # (M3 Pro 18GB 에서 나머지는 메모리가 모자란다).
+    # 확정은 ADR-005. 지금 값은 **VRAM 16GB(RTX 5060 Ti)에 올릴 수 있는 유일한
+    # 후보**다 — gemma-4-e4b(~16GB)·Sailor2-8B(~17GB)는 bf16 으로 들어가지 않는다.
+    # 장치가 mps 에서 cuda 로 바뀌었어도 이 제약 자체는 그대로다(18GB → 16GB).
     #
     # ★ 이 값은 **로컬 경로도 받는다** (`from_pretrained` 가 그렇다).
     #   `Qwen3.5-4B` 는 이름과 달리 `Qwen3_5ForConditionalGeneration` 이라
@@ -113,13 +114,15 @@ class Settings(BaseSettings):
     #     이 죽어 있던 사고(커밋 64dc422)와 **같은 형태**다. 배포 경로가 정해질 때
     #     함께 다룬다.
     #
-    #   `--stage int8` 로 4.87GB 까지 줄지만 MPS 에서 8.7배 느려 이 장치에서는
-    #   판정할 수 없다 — AWS(CUDA)로 이월했다. 탈락이 아니다.
+    #   `--stage int8` 로 4.87GB 까지 준다. MPS 에서는 int8 행렬곱 커널이 없어
+    #   8.7배 느렸고 그래서 판정을 미뤘지만, **cuda 로 옮기면서 그 제약이
+    #   풀렸다** — 이제 실측으로 판정할 수 있다(ADR-005 의 후속 작업).
+    #   4.87GB 는 16GB 에 1차 3종을 모두 올릴 여지도 만든다.
     #   상세: docs/2026-08-18-model-slimming.md
     local_model: str = "Qwen/Qwen3.5-4B"
-    # 개발은 mps(M3 Pro), 배포는 cuda(AWS g5/g6). 자동 선택하되 강제할 수 있게 둔다 —
-    # 어느 장치로 돌았는지는 리포트에 남겨야 비교가 성립한다.
-    local_device: Literal["auto", "mps", "cuda", "cpu"] = "auto"
+    # cuda 단일 경로다(ADR-005). 자동 선택하되 강제할 수 있게 둔다 — 어느 장치로
+    # 돌았는지는 리포트에 남겨야 비교가 성립한다. cpu 는 등가성 검사 전용이다.
+    local_device: Literal["auto", "cuda", "cpu"] = "auto"
     local_dtype: Literal["auto", "float16", "bfloat16", "float32"] = "auto"
     # 생성 길이. API 경로의 llm_max_tokens 와 분리한다 — 로컬은 지연 특성이 달라
     # 같은 값을 쓸 이유가 없다.
@@ -137,6 +140,19 @@ class Settings(BaseSettings):
     # (BGE-m3 는 EMBED_BACKEND=sentence_transformers 필요 — torch).
     # 확정은 Phase 7 컨테이너 메모리 실측 후 ADR-003.
     embed_model: str = "intfloat/multilingual-e5-large"
+    # ★ fastembed 는 기본 캐시를 `%TEMP%/fastembed_cache` 에 둔다. 즉 **OS 가
+    #   temp 를 비우면 모델이 사라진다** — 2026-08-21 에 첫 질의가 재다운로드
+    #   23초를 그대로 물었고, 그 시간이 SSE 첫 응답에 실렸다.
+    #
+    #   더 나쁜 것은 오프라인이다. 심사 현장에서 네트워크가 없으면 재다운로드가
+    #   실패하고 **검색 자체가 죽는다** — 생성이 아니라 파이프라인 ④ 가 멎으므로
+    #   폴백도 나가지 않는다.
+    #
+    #   `data/` 아래로 옮기면 chroma·bm25 와 같은 규칙이 된다: 리포 안에 있고,
+    #   `.gitignore` 대상이며, Dockerfile 의 `COPY apps/api/data/` 가 그대로
+    #   이미지에 담아 **런타임 다운로드가 사라진다**(.env.example 이 인덱스에
+    #   요구하는 것과 같은 원칙).
+    embed_cache_path: Path = API_ROOT / "data" / "embed_cache"
 
     # ── 인덱스 ───────────────────────────────────────────────────────
     chroma_path: Path = API_ROOT / "data" / "chroma"
@@ -205,6 +221,19 @@ class Settings(BaseSettings):
     #
     #   ⚠ en·vi 의 무근거 표본이 각각 2건·1건뿐이라 **이 두 값은 잠정이다.**
     #     골든셋을 160문항으로 늘릴 때 무근거 문항을 언어별로 채워 재보정한다.
+    #
+    # ★★ **zh·uz·th 는 여기 없다 — 일부러다** (2026-08-21 언어 확장).
+    #    보정 표본이 하나도 없는 상태에서 값을 지어 넣으면 두 방향 다 나쁘다:
+    #    높게 잡으면 그 언어 이용자는 **모든 질의가 폴백**되고(기능 상실),
+    #    낮게 잡으면 근거 없는 질의까지 통과해 환각이 나간다.
+    #
+    #    빠져 있으면 `threshold_for()` 가 보수적인 `threshold_top1`(0.851) 을 쓴다.
+    #    ko 보정값(0.8246)보다 높으므로 **거짓 생성보다 거짓 폴백 쪽으로 기운다** —
+    #    §6.6 이 정한 방향과 같다. 과잉 폴백은 리포트에 드러나지만 근거 없는
+    #    생성은 조용히 나간다.
+    #
+    #    → 세 언어의 골든셋 문항(정상 + 무근거)을 채운 뒤
+    #      `python -m app.rag.cli --calibrate` 로 재보정해 여기 추가한다.
     threshold_top1_by_lang: Annotated[dict[str, float], NoDecode] = {
         "ko": 0.8246,
         "en": 0.8445,
@@ -247,6 +276,9 @@ class Settings(BaseSettings):
     # ── 외부 OpenAPI (M1 범위 밖) ────────────────────────────────────
     fss_api_key: str = ""
     ecos_api_key: str = ""
+    # 외부가 느릴 때 우리 화면까지 같이 멎지 않게 한다. F7·F6 은 부가 기능이라
+    # 오래 기다리느니 "지금 조회할 수 없다"를 빨리 말하는 쪽이 낫다.
+    external_api_timeout_s: float = 5.0
 
     # ── 운영 ─────────────────────────────────────────────────────────
     # `NoDecode` 가 없으면 pydantic-settings 가 **검증자보다 먼저** 값을 JSON 으로
@@ -283,14 +315,35 @@ class Settings(BaseSettings):
             return self.threshold_rerank_by_lang.get(lang, self.threshold_rerank)
         return self.threshold_top1_by_lang.get(lang, self.threshold_top1)
 
-    @field_validator("chroma_path", "bm25_index_path", mode="after")
+    @field_validator("chroma_path", "bm25_index_path", "embed_cache_path", mode="after")
     @classmethod
     def _resolve_runtime_paths(cls, v: Path) -> Path:
         return _resolve(v, API_ROOT)
 
     @property
-    def llm_enabled(self) -> bool:
+    def anthropic_key_present(self) -> bool:
+        """Anthropic 키가 있는가. **"생성이 가능한가"가 아니다.**
+
+        ★ 예전 이름은 `llm_enabled` 였고, 그 이름이 그대로 사고가 됐다.
+          ADR-004 로 기본 백엔드가 `local` 이 된 뒤에도 이 속성은 키만 보므로,
+          `/healthz` 가 로컬 경로에서 **항상** `llm_configured=false` 를 보고했다.
+          운영에서 헬스체크는 "생성이 죽었다"로 읽히는 신호다.
+
+        키 유무를 물어야 하는 곳(Anthropic 경로 분기, `verify_generation.py`)은
+        이 속성을, 생성 가능 여부를 물어야 하는 곳은 `generation_enabled` 를 쓴다.
+        """
         return bool(self.anthropic_api_key)
+
+    @property
+    def generation_enabled(self) -> bool:
+        """생성이 실제로 가능한가 — 백엔드를 함께 본다.
+
+        로컬 백엔드는 키를 요구하지 않는다. "외부로 나가는 것이 없다"는 ADR-004
+        의 주장이 성립하려면 키 없이 도는 것이 정상 경로다.
+        """
+        if self.llm_backend == "local":
+            return True
+        return self.anthropic_key_present
 
 
 @lru_cache(maxsize=1)

@@ -212,15 +212,45 @@ class TestPerLanguageThreshold:
     다국어 서비스에서 이건 기능 상실이므로 회귀를 막는다.
     """
 
-    def test_every_public_language_has_a_threshold(self):
+    #: 실측으로 보정된 언어. 여기 있는 언어는 자기 임계값을 **반드시** 가진다.
+    CALIBRATED = ("ko", "en", "vi")
+
+    def test_calibrated_languages_keep_their_threshold(self):
+        s = get_settings()
+        for lang in self.CALIBRATED:
+            assert lang in s.threshold_top1_by_lang, (
+                f"{lang} 임계값이 사라졌습니다. `python -m app.rag.cli --calibrate` 로 "
+                "재보정하고 값을 되돌리세요."
+            )
+
+    def test_uncalibrated_languages_fall_back_conservatively(self):
+        """★ 보정 표본이 없는 언어는 **값을 지어내지 않고** 보수적으로 폴백한다.
+
+        2026-08-21 에 공개 언어를 6종으로 늘리면서 zh·uz·th 가 생겼는데, 이 셋은
+        골든셋 표본이 하나도 없다. 값을 지어 넣으면 두 방향 다 나쁘다 — 높으면
+        그 언어가 **전부 폴백**되고(기능 상실), 낮으면 무근거 질의가 통과한다.
+
+        그래서 `threshold_top1_by_lang` 에서 **일부러 뺐고**, 폴백값인
+        `threshold_top1` 이 보정된 어떤 값보다도 높아 §6.6 이 정한 방향
+        (거짓 생성보다 거짓 폴백)으로 기운다는 것을 여기서 고정한다.
+
+        → 세 언어의 골든셋을 채워 보정하면 `CALIBRATED` 에 추가하면 된다.
+        """
         from app.schemas.common import Lang
 
         s = get_settings()
-        for lang in Lang:
-            assert lang.value in s.threshold_top1_by_lang, (
-                f"{lang.value} 임계값이 없습니다. 공개 언어를 늘렸다면 "
-                "`python -m app.rag.cli --calibrate` 로 재보정하세요."
+        uncalibrated = [l.value for l in Lang if l.value not in self.CALIBRATED]
+        assert uncalibrated, "모든 언어가 보정됐다면 CALIBRATED 를 갱신하세요"
+
+        for lang in uncalibrated:
+            assert lang not in s.threshold_top1_by_lang, (
+                f"{lang} 에 보정되지 않은 임계값이 들어갔습니다. 표본 없이 값을 "
+                "넣으면 그 언어가 전부 폴백되거나 무근거 질의를 통과시킵니다."
             )
+            assert s.threshold_for(lang) == s.threshold_top1
+            # 보정된 어떤 값보다도 높아야 보수적이다.
+            for known in self.CALIBRATED:
+                assert s.threshold_for(lang) >= s.threshold_for(known)
 
     def test_translation_raises_non_korean_scores(self):
         """★ 번역이 켜지면서 관계가 **뒤집혔다.**

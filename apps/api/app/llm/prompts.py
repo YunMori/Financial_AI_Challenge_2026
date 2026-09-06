@@ -17,6 +17,9 @@ LANG_NAMES: dict[Lang, str] = {
     Lang.KO: "한국어",
     Lang.EN: "English",
     Lang.VI: "Tiếng Việt (베트남어)",
+    Lang.ZH: "中文 (중국어 간체)",
+    Lang.UZ: "O'zbekcha (우즈베크어)",
+    Lang.TH: "ไทย (태국어)",
 }
 
 # 캐시되는 안정 프리픽스. sonnet-5 의 최소 캐시 프리픽스는 1,024토큰이므로

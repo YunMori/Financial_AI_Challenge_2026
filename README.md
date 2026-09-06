@@ -18,7 +18,28 @@
 `5만 달러` 와 `5만 원` 을 다른 값으로 취급한다.
 
 검색·판정·가드레일은 전부 로컬에서 실행되고, **외부로 나가는 것은 생성 호출
-하나뿐**이다 (ADR-002).
+하나뿐**이다 (ADR-002). F7·F6 이 붙으면서 금감원·한국은행 공개 API 조회가
+더해지지만, 둘 다 **없으면 없다고 말하고 지어내지 않는다**.
+
+## 기능
+
+| | 기능 | 성격 |
+|---|---|---|
+| F1 | 다국어 온보딩 | 규칙 |
+| F2 | 계좌개설 내비게이터 | 규칙 (생성 없음) |
+| F3 | 서류 체크리스트 (PDF) | 템플릿 |
+| F4 | 한도제한계좌 해제 가이드 | RAG + LLM |
+| F5 | 근거 기반 QA 챗봇 | RAG + LLM |
+| F6 | 해외송금 시뮬레이터 | 순수 함수 + ECOS |
+| F7 | 금융상품 비교 | FSS OpenAPI + 정렬 |
+| F8 | 사기 유형 대조 | 정적 체크리스트 (**판정 없음**) |
+
+공개 언어 6종(ko·en·vi·zh·uz·th). **원어민 검수를 마친 것은 ko·en·vi 뿐이며,
+나머지는 화면 상단에 미검수 고지가 상시로 붙는다** (`REVIEWED`, spec-changes #31).
+
+★ **근거가 없으면 숫자를 내지 않는다.** F6 의 송금 한도는 1차 출처를 확보하지
+못해 `unknown` 으로 나가며, "한도를 넘지 않았다"고도 말하지 않는다 —
+근거 없는 안심이 근거 없는 경고보다 위험하다 (spec-changes #29).
 
 ## 빠른 시작
 
@@ -54,7 +75,7 @@ cd apps/api && .venv/bin/python -m app.rag.cli "E-9 한도제한계좌 해제 �
 # 검색 신뢰도 임계값 재보정 — 임베딩 모델이나 코퍼스를 바꾸면 반드시 실행
 .venv/bin/python -m app.rag.cli --calibrate
 
-# 테스트 (345개)
+# 테스트 (513개)
 .venv/bin/python -m pytest -q
 
 # 골든셋 자동 채점 (planner §13) — 리포트는 커밋한다
@@ -95,7 +116,7 @@ docker run -p 10000:10000 -e LLM_BACKEND=local kbuddy-api
 | `planner.md` | 8주 실행 계획서 |
 | `docs/functional-spec.md` | 기능명세서 (제출물) |
 | `docs/fact-check.md` | 기획서 수치의 1차 출처 검증 대장 (5/11 닫힘) |
-| `docs/spec-changes.md` | **기획서 수정 대상 23건** — 근거·조치 포함 |
+| `docs/spec-changes.md` | **기획서 수정 대상 31건** — 근거·조치 포함 |
 | `eval/` | 골든셋 160문항 + 자동 채점 하니스 + 실험 리포트 |
 | `docs/dev-log.md` | 실측값·결정·기획서와 어긋난 지점 |
 | `docs/adr/` | 되돌리기 어려운 결정 기록 |
@@ -110,13 +131,39 @@ apps/api/app/
 ├─ tiering/             계층 C 규칙 · 최종 확정 ★
 ├─ guardrail/           인젝션 중화 · PII 마스킹
 ├─ llm/                 Anthropic 클라이언트 · 프롬프트
+├─ matrix/              요건 매트릭스 로더 · fit_score (F2, 생성 없음)
+├─ docs/                체크리스트 조립 · WeasyPrint 렌더 (F3)
 └─ util/numerals.py     숫자 정규화 (환각 방어의 축)
 
 corpus/
 ├─ sources.yaml         수집 대상 (1차 출처만)
 ├─ scripts/             01_fetch → 02_clean → 03_chunk → 04_index
+├─ matrix/              institutions.yaml (F2) · documents.yaml (F3)
 ├─ manifest.json        sha256 기록 — 근거가 바뀌면 드러난다
 └─ stats/               배경 통계 (RAG 대상 아님)
+```
+
+## 필수기능 (F1~F5)
+
+| | 엔드포인트 | 화면 | 성질 |
+|---|---|---|---|
+| F1 온보딩 | — | S1 `/[locale]` · S2 `/profile` | 규칙 (자유 입력 0) |
+| F2 계좌개설 내비게이터 | `GET /institutions` | `/institutions` | **규칙만** — 생성 없음 |
+| F3 서류 체크리스트 | `POST /checklist` (PDF) · `/checklist/preview` | `/tools/checklist` | 템플릿 |
+| F4 한도해제 가이드 | `POST /guide/limit-release` | `/guide/limit-release` | RAG + LLM |
+| F5 근거 기반 QA | `POST /chat` | S4 `/chat` | RAG + LLM |
+
+F4 는 **F5 와 같은 `ChatPipeline`·같은 SSE 이벤트**를 탄다. 다른 것은 프로필로
+한국어 질의를 조립한다는 것과, `done` 에 F3 로 잇는 `next_action` 이 실린다는
+것뿐이다 (폴백일 때는 붙지 않는다).
+
+**PDF 는 컨테이너에서만 렌더된다.** WeasyPrint 의 시스템 의존성(libpango 등)이
+Windows·macOS 로컬에 없기 때문이며, 로컬에서 `POST /checklist` 가 503 을 내고
+화면 내 HTML 체크리스트로 폴백하는 것이 정상이다. 조판 검증:
+
+```bash
+docker build -f apps/api/scripts/typeset/Dockerfile.checklist -t kb-checklist .
+docker run --rm kb-checklist        # 글자별 폰트명 대조 (텍스트 비교로는 통과시키지 않는다)
 ```
 
 ## 알려진 제약
@@ -133,6 +180,15 @@ corpus/
   **en·vi 는 무근거 표본이 2건·1건뿐이라 잠정값**이다.
 - **리랭킹은 넣지 않는다** (ADR-001). `jina-reranker-v2` 가 Recall@5 를
   93.8% → 96.9% 로 올리지만 질의당 6.8초를 더 써 지연 예산을 두 배로 넘긴다.
-- **지연이 예산을 넘는다**: p50 6.2초 / p95 17.8초 (목표 P95 6초). 미해결.
-- 요건 매트릭스는 대부분 `unknown` 이다. 은행별 계좌개설 요건의 공식 근거를
-  확보하지 못했고, **추정으로 채우면 그 자체가 환각**이므로 비워 둔다.
+- **지연 목표를 TTFT 로 재정의했다** (2026-08-20, `spec-changes.md` #27).
+  로컬 4B 의 총 완료는 p50 21.8초 / p95 44.7초라 총 완료 P95 6초는 달성 불가능하다.
+  공개 지표는 **TTFT p50 3.5초 / p95 18.4초**(exp_012)이고, 총 완료 시간은
+  참고 지표로 계속 기록한다.
+- 요건 매트릭스의 **비자별 셀은 전부 `unknown`** 이다. 은행별 계좌개설 요건의
+  공식 근거를 확보하지 못했고, **추정으로 채우면 그 자체가 환각**이므로 비워 둔다.
+  기관 단위(모바일 외국인등록증 수용)는 6곳 전부 `official` 이다 — 같은 보도자료의
+  기관 열거에서 승격했다(`spec-changes.md` #28).
+  `fit_score` 는 **미확인 항목을 0 점으로 접지 않는다.** 계산에서 빼고 `unverified`
+  로 표시한다 — 확인 못 한 은행이 나쁜 은행으로 정렬되면 근거 없는 주장이 점수가 된다.
+- **F2 의 LLM 설명 문장은 M1 에서 뺐다**(`spec-changes.md` #26). 조회 결과가 전부
+  unknown 이라 생성할 내용이 없고, 카드마다 20~45초가 붙는다.

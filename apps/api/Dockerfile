@@ -32,7 +32,11 @@ ENV PIP_NO_CACHE_DIR=1
 ENV HF_HOME=/app/.cache/huggingface
 ENV EMBED_MODEL=intfloat/multilingual-e5-large
 
-COPY apps/api/requirements.txt .
+# ★ **두 파일을 함께 복사한다.** requirements.txt 는 `-r requirements-base.txt` 로
+#   시작하므로 base 가 없으면 빌드가 여기서 죽는다 (ADR-005 후속, 2026-08-19).
+COPY apps/api/requirements-base.txt apps/api/requirements.txt ./
+# CPU 파일을 쓴다. 이 이미지는 GPU 런타임(`--gpus all`)을 전제하지 않는다 —
+# GPU 배포로 갈 때 requirements-gpu.txt 로 바꾸고 nvidia-container-toolkit 을 건다.
 RUN pip install --no-cache-dir -r requirements.txt
 
 # ★ 임베딩 모델을 빌드 타임에 내려받는다. 이 줄이 없으면 첫 요청이
@@ -48,6 +52,10 @@ COPY apps/api/data/ ./data/
 # 빠뜨리면 첫 요청에서 SystemExit 가 난다 — 로컬에서는 리포 루트에서 찾히므로
 # **배포에서만** 터지는 종류의 사고다.
 COPY corpus/glossary/ ./corpus/glossary/
+
+# 요건 매트릭스·서류 카탈로그도 런타임에 읽는다 (F2 내비게이터 · F3 체크리스트).
+# 용어 사전과 **똑같은 이유로** 빠뜨리면 배포에서만 SystemExit 가 난다.
+COPY corpus/matrix/ ./corpus/matrix/
 
 COPY apps/api/app/ ./app/
 
