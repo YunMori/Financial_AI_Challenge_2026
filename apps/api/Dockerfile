@@ -37,7 +37,18 @@ ENV EMBED_MODEL=intfloat/multilingual-e5-large
 COPY apps/api/requirements-base.txt apps/api/requirements.txt ./
 # CPU 파일을 쓴다. 이 이미지는 GPU 런타임(`--gpus all`)을 전제하지 않는다 —
 # GPU 배포로 갈 때 requirements-gpu.txt 로 바꾸고 nvidia-container-toolkit 을 건다.
-RUN pip install --no-cache-dir -r requirements.txt
+#
+# ★ torch 를 **CPU 전용 휠**로 먼저 깐다. PyPI 의 리눅스 torch 휠은
+#   nvidia-cu13 런타임(cublas·cudnn·cufft 등)을 자동 동반한다 —
+#   `requirements.txt` 헤더가 "GPU 가 있으면 쓴다"고 적어 둔 그 동작인데,
+#   **GPU 를 전제하지 않는 이 이미지에서는 순수한 낭비다.** 이미지가 4.99GB 가
+#   되고, 40GB 루트 볼륨의 EC2 에서 빌드가 `no space left on device` 로 죽었다
+#   (실측 2026-09-07).
+#
+#   먼저 깔아 두면 뒤따르는 `-r requirements.txt` 의 `torch~=2.13` 이 이미
+#   충족되어 재설치하지 않는다.
+RUN pip install --no-cache-dir torch~=2.13 --index-url https://download.pytorch.org/whl/cpu \
+    && pip install --no-cache-dir -r requirements.txt
 
 # ★ 임베딩 모델을 빌드 타임에 내려받는다. 이 줄이 없으면 첫 요청이
 # 모델 다운로드(2.2GB)를 기다리고, 심사위원이 처음 접속했을 때 그 일이 벌어진다.
