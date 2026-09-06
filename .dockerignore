@@ -10,3 +10,11 @@ corpus/stats/_incoming
 docs
 eval
 **/__pycache__
+
+# 로컬 생성 모델 가중치 (8.43GB). 이미지에 굽지 않고 런타임에 /models 로
+# 마운트한다 — 여기서 빼지 않으면 빌드 컨텍스트 전송만으로 빌드가 사실상 멈춘다.
+models
+
+# 임베딩 모델 캐시(2.1GB). 이미지가 빌드 타임에 스스로 받으므로 호스트의 것을
+# 보낼 이유가 없다 — 빌드 컨텍스트만 무거워진다.
+apps/api/data/embed_cache

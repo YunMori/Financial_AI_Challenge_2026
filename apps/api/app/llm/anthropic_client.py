@@ -168,10 +168,32 @@ def _strict_schema(schema: dict[str, Any]) -> dict[str, Any]:
     모든 object 에 `additionalProperties: false` 가 있어야 하고, Pydantic 이
     붙이는 `$defs`/`title` 은 그대로 두어도 된다. 여기서 스키마를 손보는 대신
     `LLMAnswer` 를 고치면 명세서와 어긋나므로, 변환은 이 함수에 가둔다.
+
+    ★ **`maxItems`/`minItems` 를 떼어 낸다.** 구조화 출력이 배열에 대해 그것을
+      받지 않는다 — 남겨 두면 매 호출이 400 으로 죽는다:
+
+          output_config.format.schema:
+          For 'array' type, property 'maxItems' is not supported
+
+      이 값들은 ADR-005 후속 ⑦ 이 **로컬 백엔드를 고치려고** 넣은 것이다
+      (`numbers_used max_length=24` · `citations max_length=12`). 모델이 같은
+      값을 무한 반복하다 cap 을 소진해 JSON 이 잘리던 문제였고, XGrammar 는
+      JSON Schema 의 `maxItems` 를 문법 차원에서 강제한다.
+
+      즉 **한 스키마를 두 백엔드가 다르게 받아들인다.** Pydantic 모델은
+      건드리지 않는다 — 로컬 경로의 강제와 파이썬 쪽 검증은 그대로 두고,
+      API 가 거부하는 키워드만 이 경로에서 없앤다. 상한이 사라져도 응답은
+      `LLMAnswer` 검증을 다시 거치므로 파이썬 쪽 방어는 유지된다.
+
+      실측 2026-09-07: 이것 때문에 `LLM_BACKEND=anthropic` 이 통째로 죽어
+      있었다. ADR-004 가 "실측이 미달이면 한 줄로 되돌아간다"고 적어 둔
+      탈출구가 막혀 있던 것이다.
     """
+    drop = {"maxItems", "minItems"}
+
     def walk(node: Any) -> Any:
         if isinstance(node, dict):
-            node = {k: walk(v) for k, v in node.items()}
+            node = {k: walk(v) for k, v in node.items() if k not in drop}
             if node.get("type") == "object" and "additionalProperties" not in node:
                 node["additionalProperties"] = False
             return node
