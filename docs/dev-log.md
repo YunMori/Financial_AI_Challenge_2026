@@ -1980,3 +1980,270 @@ EV 인증서의 조직명·법인등록번호로 확인했다. EV 는 CA 가 법
   최신인 것처럼 보이는** 상태가 되고, 아무 에러도 나지 않는다.
 
 검증: 수정 후 `--verify` 재실행 → 매니페스트 sha256 동일, `git diff` 비어 있음.
+
+## 2026-09-07 — 단일 EC2 배포 구성: nginx 를 앞에 두자 레이트리밋이 깨져 있었다
+
+`apps/api/Dockerfile` 이 주석으로만 적어 두었던 것을 실제로 했다 — "GPU 배포로
+갈 때 requirements-gpu.txt 로 바꾸고 nvidia-container-toolkit 을 건다".
+한 대(`g6.xlarge` · `ap-northeast-2`)에 api·web·nginx 를 올린다.
+
+**선행 병합.** `feat/cuda-only-dev-and-overfallback` 이 main 에 없는 채로
+남아 있었다(커밋 6개 — ADR-005, requirements 3분할, F2·F3·F4, F6·F7·F8,
+exp_010~012). 배포가 requirements-gpu·CUDA 단일 경로·`corpus/matrix` 를
+전제하므로 먼저 병합했다.
+
+### 프록시가 레이트리밋을 무력화한다 ★
+
+nginx 를 앞에 두면 `slowapi` 의 `get_remote_address` 가 보는
+`request.client.host` 가 프록시 IP 로 고정된다. **전 이용자가 분당 20회 한
+버킷을 공유**하게 되고, planner §9.1 이 "IP당"이라고 못박은 것이 조용히
+깨진다. 에러도 로그도 남지 않는다 — 한도에 걸린 이용자가 남의 요청 때문에
+막히는 형태로만 나타난다.
+
+대응이 **세 파일에 걸쳐 쌍으로** 맞아야 한다:
+
+| 파일 | 역할 |
+|---|---|
+| `deploy/nginx.conf` | `X-Forwarded-For` 를 넘긴다 |
+| `apps/api/Dockerfile.gpu` | uvicorn `--proxy-headers --forwarded-allow-ips` |
+| `deploy/docker-compose.yml` | 그 값에 nginx 고정 IP `172.28.0.10` 을 준다 |
+
+`--forwarded-allow-ips=*` 는 쓰지 않는다. 아무나 헤더를 위조해 한도를
+우회한다. 신뢰할 프록시를 한정하려면 주소가 고정되어야 해서 compose 에
+서브넷(`172.28.0.0/24`)과 고정 IP 를 박았다. **한쪽만 바꾸면 되돌아간다.**
+
+### `proxy_buffering off` 와 300초 타임아웃
+
+nginx 기본값(`proxy_buffering on`)이면 SSE 응답을 모아 두었다가 한 번에
+내보낸다. 화면에는 "멈춰 있다가 답이 한꺼번에 나오는" 형태로 보이고
+`ttft_ms` 계측이 무의미해진다.
+
+타임아웃은 기본 60초로는 못 쓴다. `exp_012` 의 생성 지연 p95 가 149초,
+`upstream_error` 문항은 cap 2048 을 그대로 태워 p50 156초였다(ADR-005 후속 ⑨).
+300초를 준다 — **지연을 고치는 것이 아니라 감추는 값이다.** 그 과제는 그대로 남아 있다.
+
+### 8.43GB 를 업로드하지 않는다
+
+인덱스도 가중치도 리포에 있는 것만으로 인스턴스에서 재생성된다:
+
+```
+corpus/processed/*.md  (git 추적)  → 03_chunk → 04_index → apps/api/data/
+Qwen/Qwen3.5-4B        (HF 허브)   → export_local_model --stage textonly
+```
+
+순서가 고정된다 — **인덱스 → API 이미지 → 가중치.** GPU 이미지가
+`apps/api/data/` 를 COPY 하고, 가중치 산출이 그 이미지의 torch 를 빌려 쓴다.
+`bootstrap.sh` 가 이 순서를 강제하고 멱등하게 돈다.
+
+가중치는 이미지에 굽지 않고 `/models` 로 마운트한다. ADR-004 의 1차 3종
+비교 때 후보마다 이미지를 다시 빌드하는 대신 `LOCAL_MODEL` 한 줄로 바꾼다.
+대신 `models/` 를 `.dockerignore` 에 넣어야 했다 — 7.9GB 가 빌드 컨텍스트로
+전송되면 빌드가 사실상 멈춘다.
+
+### 빌드 타임에는 GPU 가 없다
+
+`Dockerfile.gpu` 가 임베딩 모델을 구울 때 `CUDA_VISIBLE_DEVICES=""` 를 준다.
+fastembed 0.8 의 기본값이 `cuda=Device.AUTO` 라, 비워 두지 않으면 GPU 없는
+빌드 컨테이너에서 CUDA 세션을 만들려다 빌드가 죽는다.
+
+`pip uninstall -y onnxruntime` 는 `requirements-gpu.txt` 헤더가 적어 둔
+2단계를 이미지가 그대로 한 것이다. 빠뜨리면 임베딩이 **에러 없이** CPU 로
+돌아 32배 느려진다.
+
+### 검증한 것 / 못 한 것
+
+- ✅ Next.js standalone 빌드 — `check-i18n`(194키 6언어) 통과, `server.js` 생성,
+  번들에 `localhost:8000` 이 남지 않고 상대 경로 `/api/v1` 로 주입됨.
+- ✅ `docker compose config` 문법.
+- ⬜ nginx 문법 — 로컬 Docker 데몬이 꺼져 있어 인스턴스에서 확인한다.
+- ⬜ **ADR-005 §6 의 AWS 1회 검증.** 개발 GPU 는 sm_120, 배포 타깃은 sm_86/89 다.
+  인스턴스에서 `exp_011` 을 재현해 같은 산출물이 나오는지 확인하는 것이
+  이 배포의 실질적 수용 기준이다. 아직 AWS 자격증명이 없어 실행하지 못했다.
+
+## 2026-09-07 (이어서) — AWS 실계정 확인: g6 는 2b 에 없고, L4 는 후보 3종을 다 올린다
+
+자격증명을 붙이고 서울 리전을 실제로 조회했다(계정 348623072181).
+
+### ① 서브넷을 지정하지 않으면 AZ 복권이 된다 ★
+
+`run-instances` 에 서브넷을 주지 않으면 EC2 가 기본 서브넷 중 하나를 임의로
+고른다. 그런데 **GPU 타입은 AZ 를 가린다** — 서울에서 `g6.xlarge` 는
+`2a·2c·2d` 에만 있고 **`2b` 에는 없다**(`g5.xlarge`·`g6.2xlarge` 도 같은 분포).
+기본 VPC(`vpc-03e2afb27d06d3526`)는 2a~2d 넷 다 기본 서브넷을 갖고 있어서
+**4번에 1번꼴로 `Unsupported` 가 났을 것**이다. 재현이 안 되는 형태의 실패다.
+
+→ `provision-aws.sh` 가 `describe-instance-type-offerings` 로 타입을 제공하는
+AZ 를 먼저 구하고, 그중 기본 서브넷이 있는 곳을 골라 `--subnet-id` 로 명시한다.
+서브넷을 명시하면 퍼블릭 IP 자동할당이 서브넷 설정을 따르므로
+`--associate-public-ip-address` 도 함께 준다.
+
+### ② L4 22.4GB — ADR-005 가 미뤄 둔 3종 비교가 여기서 열린다
+
+`g6.xlarge` 실측 사양: **4 vCPU · 16GB RAM · L4 22,888MiB**.
+
+ADR-005 는 개발 GPU(RTX 5060 Ti 16GB)에 1차 3종 중 하나만 올라간다고 적고,
+`gemma-4-e4b-it`(~16GB)·`Sailor2-8B-Chat`(~17GB)을 "탈락이 아니라 이월"로
+남겨 두었다. **L4 는 22.4GB 라 셋 다 bf16 으로 올라간다.**
+
+`exp_012` 의 최대 병목이 vi 과잉폴백 66.7% 이고 그 원인이 모델의 다국어
+한계(한국어로 답한다)라 코드로 못 고친다고 결론 났으므로, **SEA 특화 SFT 인
+Sailor2 를 재는 것이 남은 최대 레버다.** 이 인스턴스는 배포 장비이자
+그 판정 장비다 — ADR-004 가 "AWS 가 있어야 판정된다"고 한 것이 3종 전량
+비교에 한해 남아 있었고, 그 조건이 지금 채워졌다.
+
+⚠ 다만 **시스템 RAM 은 16GB 뿐이다.** `device_map` 이 샤드 단위로 GPU 에
+올리므로 호스트 피크는 샤드 크기에 머물지만, 8B 후보에서 처음 부딪힐 수 있는
+자리다.
+
+### ③ 쿼터가 유일한 차단 요인이었다
+
+`Running On-Demand G and VT instances` 가 **0** 이었다. 8 로 증설 신청
+(요청 `d05bec9c…`, PENDING). 승인 전에는 `run-instances` 가
+`VcpuLimitExceeded` 로 실패한다.
+
+그 밖에는 깨끗하다 — 기존 인스턴스 0, `kbuddy-sg`·키페어 이름 충돌 없음,
+AMI 는 `ami-0998eac84900cf563`(DL Base OSS Nvidia Driver GPU · Ubuntu 22.04 ·
+20260902)로 해소된다.
+
+> 루트 계정 액세스 키를 쓰고 있다. 배포 후 IAM 사용자로 옮기고 루트 키를
+> 비활성화한다.
+
+## 2026-09-07 (이어서) — CPU 스테이징을 실제로 띄웠다: 세 가지가 걸렸다
+
+`m7i-flex.large`(2vCPU/8GB, ap-northeast-2d, `i-0007a9eb3cf2705ac`)에 배선을
+올렸다. 목적은 GPU 고유가 아닌 부분을 시간당 $1 장비 이전에 걸러내는 것이었고,
+**실제로 세 개가 걸렸다.**
+
+### ⓪ 계정이 AWS 무료 플랜이다 — G 쿼터가 0 이었던 진짜 이유 ★
+
+`t3.large` 로 `run-instances` 하니
+`InvalidParameterCombination: The specified instance type is not eligible for
+Free Tier` 가 났다. 이 계정은 **무료 플랜이라 무료 티어 대상 타입만 띄울 수
+있다.** G 온디맨드·스팟이 서울·도쿄·버지니아·오레곤·싱가포르 **전 리전에서
+0** 이었던 것도 쿼터 정책이 아니라 이것 때문이다.
+
+→ **유료 플랜 전환이 GPU 의 선행 조건이다.** 제출해 둔 쿼터 증설(8 vCPU)은
+그 전에는 승인될 이유가 없다. 무료 티어 대상 중 메모리가 가장 큰
+`m7i-flex.large`(8GB)로 스테이징을 진행했다.
+
+### ① 빈 `public/` 이 새 체크아웃에서 web 빌드를 죽인다 (수정 완료)
+
+`apps/web/public` 이 비어 있고 git 은 빈 디렉터리를 추적하지 않는다. 로컬
+작업 트리에는 폴더가 보이므로 재현되지 않고, clone 한 곳에서만
+`COPY --from=builder /app/public`: `not found` 로 죽는다. builder 단계에서
+`mkdir -p` 로 보장했다. **이 프로젝트가 세 번째로 겪은 "배포에서만" 사고다.**
+
+### ② 레이트리밋이 아예 걸려 있지 않다 ★
+
+`main.py` 가 `Limiter` 를 만들고 `app.state.limiter` 와 예외 핸들러까지
+등록해 두었는데, **`@limiter.limit(...)` 이 어느 라우트에도 붙어 있지 않다.**
+`settings.rate_limit_per_min`(20)은 코드 어디에서도 읽히지 않는다.
+
+실측: `/api/v1/institutions` 를 연속 24회 호출 — 전부 200. 위조한
+`X-Forwarded-For: 1.2.3.4` 도 그냥 통과한다(막을 것이 없으니).
+
+planner §9.1 의 "IP당 분 20회"가 **선언만 있고 구현이 없다.**
+
+> 프록시 뒤에서 원 IP 를 잃는 문제(같은 날 앞 절)를 고친 것은 여전히 유효하다.
+> 로그가 `110.15.186.199` 를 찍는다 — `172.28.0.x` 가 아니다. 한도를 붙일 때
+> 그 값이 올바르게 들어갈 자리가 준비된 것이고, 순서가 반대였으면
+> **한도를 붙이자마자 전 이용자 공용 버킷이 됐을 것이다.**
+
+### ③ `.env` 의 키가 문자열 `"None"` 이다 — healthz 가 거짓말을 한다
+
+생성이 전부 `upstream_error` 로 폴백했다. 로그는 `AuthenticationError`.
+`.env` 의 `ANTHROPIC_API_KEY` 값이 4자짜리 문자열 `None` 이었다 —
+`50854e9`(자리 이동 백업) 무렵 실키가 빠진 것으로 보인다.
+
+문제는 그 다음이다. `generation_enabled` 는 `bool(self.anthropic_api_key)` 를
+보므로 **`"None"` 도 참이다.** `/healthz` 가 `llm_configured: true` 를
+보고하는데 실제로는 모든 생성이 실패한다. 운영에서 헬스체크는 "생성이 죽었다"
+로 읽히는 신호라고 `config.py` 가 스스로 적어 두었는데, **그 신호가 거짓이다.**
+
+### 동작을 확인한 것
+
+| 항목 | 결과 |
+|---|---|
+| 컨테이너 3종 | api(healthy)·web·nginx 기동 |
+| `/healthz` (외부) | `status ok · index_present true` |
+| 프런트 `/ko` | HTTP 200 · 0.13s |
+| 계층 C 선판정 | `latency_ms: 0` — 규칙이 LLM 전에 차단 ✅ |
+| 검색 | tier A · top1 0.850 · 후보 27건 ✅ |
+| SSE | `meta → token → invalidate → citations → done` 순서대로 도착 ✅ |
+| 원 IP 보존 | 로그에 `110.15.186.199` ✅ |
+
+지연은 `meta` 까지 28.9초다. 2 vCPU CPU 에서 e5-large 임베딩을 돌리기
+때문이며 GPU 판정과 무관한 값이다.
+
+> 인스턴스는 과금 중이다. `aws ec2 stop-instances --region ap-northeast-2
+> --instance-ids i-0007a9eb3cf2705ac`
+
+## 2026-09-07 (마무리) — 실키를 꽂자 두 개가 더 나왔다: maxItems 와 임베딩 캐시
+
+`.env` 에 실 API 키를 넣고 CPU 스테이징을 관통시켰다. 인증은 바로 통과했고,
+그 뒤에서 **API 경로가 통째로 죽어 있던 것**이 드러났다.
+
+### ① `maxItems` 가 Anthropic 경로를 죽이고 있었다 ★
+
+```
+400 invalid_request_error — output_config.format.schema:
+For 'array' type, property 'maxItems' is not supported
+```
+
+ADR-005 후속 ⑦ 이 `numbers_used` 무한 반복을 막으려고 스키마에 넣은 상한
+(`numbers_used max_length=24` · `citations max_length=12`)이 원인이다.
+**한 스키마를 두 백엔드가 다르게 받아들인다** — XGrammar 는 `maxItems` 를
+문법 차원에서 강제하고(그래서 ⑦ 의 수정이 성립한다), Anthropic 구조화 출력은
+그것을 거부한다.
+
+ADR-004 가 "실측이 미달이면 `LLM_BACKEND=anthropic` 한 줄로 되돌아가고,
+exp_002~005 의 재현성도 그 경로로 유지된다"고 적어 둔 **탈출구가 막혀 있었다.**
+로컬 백엔드만 쓰는 동안 아무도 그 문을 열어 보지 않은 것이다.
+
+`_strict_schema` 에서만 `maxItems`/`minItems` 를 떼어 낸다. Pydantic 모델은
+건드리지 않는다 — 로컬 경로의 강제는 유지되고, 응답은 어차피 `LLMAnswer`
+검증을 다시 거친다. 회귀 테스트 5종(`test_anthropic_schema.py`)은 **두 성질을
+함께** 본다. 한쪽만 보면 다른 쪽이 조용히 깨진다.
+
+### ② 빌드 타임에 구운 임베딩 모델을 런타임이 못 찾는다 ★
+
+Dockerfile 이 "이 줄이 없으면 첫 요청이 모델 다운로드(2.2GB)를 기다리고,
+심사위원이 처음 접속했을 때 그 일이 벌어진다"(planner §15.3)고 못박아 둔 줄이
+**아무것도 막지 못하고 있었다.**
+
+빌드는 `cache_dir` 없이 `TextEmbedding` 을 만들어 fastembed 기본 위치에 받는데,
+앱은 `settings.embed_cache_path`(=`/app/data/embed_cache`)를 넘겨 조회한다
+(`app/rag/embed.py:142`). 경로가 어긋나 **매 기동마다 2.1GB 를 새로 받는다.**
+
+실측: `/app/.cache` 268K vs `/app/data/embed_cache` 2.1GB, 기동 로그에
+`Fetching 6 files`. 빌드 타임에도 같은 `cache_dir` 를 넘겨 고쳤다 — 수정 후
+기동 로그의 다운로드 관련 줄 **0건**.
+
+### ③ CPU 이미지가 쓰지 않는 CUDA 라이브러리를 싣고 있었다
+
+PyPI 의 리눅스 torch 휠이 nvidia-cu13 런타임을 자동 동반한다. GPU 를 전제하지
+않는 이미지에는 낭비이고, 40GB 루트 볼륨에서 재빌드가 `no space left on
+device` 로 죽었다. CPU 전용 휠을 먼저 깔아 해결(`torch 2.14.0+cpu`,
+`torch.version.cuda` None, nvidia 패키지 없음).
+
+> 이미지는 여전히 8.34GB 다. 남은 큰 것은 `triton` 897M(torch 동반) ·
+> `kaleido` 221M + `plotly` 187M(리포트 그림 전용, 런타임 불필요)이다.
+> 런타임 이미지에서 뺄 여지가 있으나 이번 범위 밖으로 둔다.
+
+### 관통 확인 (3개 언어)
+
+| 언어 | tier | 인용 | 폴백 | 지연 |
+|---|---|---:|---|---:|
+| ko | A | 5 | 없음 | 11.3s |
+| en | A | 5 | 없음 | 6.7s |
+| vi | B | 5 | 없음 | 8.0s |
+
+세 언어 모두 **요청 언어로 답했다.** 2 vCPU CPU 임베딩 기준이며 GPU 판정과는
+무관한 값이다.
+
+### 남은 것
+
+- **레이트리밋 미구현** — 앞 절 ②. `@limiter.limit` 이 어느 라우트에도 없다.
+- **`generation_enabled` 가 자리표시자를 참으로 본다** — `"None"` 같은 문자열도
+  `bool()` 이 참이라 `/healthz` 가 `llm_configured: true` 를 거짓 보고한다.
+- HTTPS 없음(80 만). 도메인이 정해지면 certbot.

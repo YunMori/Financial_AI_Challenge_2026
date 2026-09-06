@@ -1,0 +1,93 @@
+# K-Buddy — 단일 EC2 (g6.xlarge / ap-northeast-2) 배포
+#
+#   cd deploy && docker compose up -d --build
+#
+# 세 컨테이너가 한 대에 올라간다. **80 포트를 내보내는 것은 nginx 뿐이다** —
+# api 를 호스트에 노출하면 프록시를 우회해 X-Forwarded-For 검사와 레이트리밋이
+# 함께 무력해진다.
+
+name: kbuddy
+
+services:
+  api:
+    build:
+      # 컨텍스트는 리포 루트다 (corpus/ 를 담아야 한다).
+      context: ..
+      dockerfile: apps/api/Dockerfile.gpu
+    image: kbuddy-api:gpu
+    restart: unless-stopped
+    # 호스트 포트를 열지 않는다. nginx 만 이 서비스에 닿는다.
+    expose:
+      - "10000"
+    env_file:
+      - ../.env
+    environment:
+      # ADR-004/005 의 기본 경로. 외부로 나가는 호출이 없다.
+      LLM_BACKEND: local
+      LOCAL_DEVICE: cuda
+      LOCAL_DTYPE: bfloat16
+      # ★ 가중치는 마운트된 것을 쓴다. 허브 ID(`Qwen/Qwen3.5-4B`)를 그대로 두면
+      #   컨테이너가 매 기동마다 10GB 를 받으려 든다. textonly 는 무손실 산출물이다
+      #   (9.32 → 8.43GB, 로짓 최대차 0 — docs/2026-08-18-model-slimming.md).
+      LOCAL_MODEL: /models/qwen35-4b-textonly
+      # nginx 컨테이너의 고정 주소. 이 값만 신뢰한다 — `*` 로 두면 아무나
+      # X-Forwarded-For 를 위조해 분당 20회 한도를 우회한다.
+      FORWARDED_ALLOW_IPS: 172.28.0.10
+      HF_HUB_OFFLINE: "1"   # 런타임 다운로드 금지. 없으면 콜드스타트가 네트워크에 걸린다
+    volumes:
+      # 읽기 전용. 후보 모델을 바꿀 때는 이 디렉터리에 넣고 LOCAL_MODEL 만 고친다.
+      - /opt/kbuddy/models:/models:ro
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    # 모델 로드에 시간이 걸린다. /healthz 는 인덱스를 로드하지 않으므로 가볍다.
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request;urllib.request.urlopen('http://127.0.0.1:10000/healthz',timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 180s
+    networks:
+      kbuddy:
+
+  web:
+    build:
+      context: ../apps/web
+      dockerfile: Dockerfile
+      args:
+        # 같은 오리진이므로 상대 경로다. 이 값은 번들에 박히므로 바꾸려면
+        # `docker compose build web` 을 다시 돌려야 한다.
+        NEXT_PUBLIC_API_BASE: /api/v1
+    image: kbuddy-web:latest
+    restart: unless-stopped
+    expose:
+      - "3000"
+    networks:
+      kbuddy:
+
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - api
+      - web
+    networks:
+      kbuddy:
+        # api 의 FORWARDED_ALLOW_IPS 와 **쌍으로 맞춘 값이다.** 한쪽만 바꾸면
+        # 레이트리밋이 조용히 프록시 IP 기준으로 되돌아간다.
+        ipv4_address: 172.28.0.10
+
+networks:
+  kbuddy:
+    ipam:
+      config:
+        - subnet: 172.28.0.0/24
