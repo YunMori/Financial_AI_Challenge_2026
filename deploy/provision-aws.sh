@@ -31,11 +31,20 @@ case "$MODE" in
         NAME="${NAME:-kbuddy}"
         ;;
     cpu)
-        # t3.large(8GB). t3.medium(4GB)도 될 수 있으나 **재 본 적이 없다** —
-        # ADR-003 이 "Phase 7 컨테이너 메모리 실측 후 확정"으로 남겨 둔 값이
-        # 아직 비어 있다. 이 배포가 그 실측을 만든다. 넉넉히 잡고, 실제 사용량을
-        # 보고 내린다 — OOM 을 디버깅하는 비용이 인스턴스 차액보다 크다.
-        INSTANCE_TYPE="${INSTANCE_TYPE:-t3.large}"
+        # ★ `m7i-flex.large`(2 vCPU / 8GB)다. t3.large 가 아니다 —
+        #   **이 계정은 AWS 무료 플랜이라 무료 티어 대상 타입만 띄울 수 있고**,
+        #   t3.large 는 `InvalidParameterCombination: not eligible for Free Tier`
+        #   로 거부된다(실측 2026-09-07). 무료 티어 대상 중 메모리가 가장 큰 것이
+        #   m7i-flex.large 이고, t3.large 와 같은 8GB 다.
+        #
+        #   메모리를 넉넉히 잡는 이유: ADR-003 이 "Phase 7 컨테이너 메모리 실측
+        #   후 확정"으로 남겨 둔 값이 아직 비어 있다. 이 배포가 그 실측을 만든다.
+        #   OOM 을 디버깅하는 비용이 인스턴스 차액보다 크다.
+        #
+        #   현재 무료 티어 대상(서울, 2026-09-07):
+        #     m7i-flex.large 2/8GB · c7i-flex.large 2/4GB · t3.small 2/2GB
+        #     t4g.small 2/2GB · t3.micro 2/1GB · t4g.micro 2/1GB
+        INSTANCE_TYPE="${INSTANCE_TYPE:-m7i-flex.large}"
         VOLUME_GB="${VOLUME_GB:-40}"
         NAME="${NAME:-kbuddy-cpu}"
         ;;
@@ -88,7 +97,12 @@ if [[ "$SG_ID" == "None" ]]; then
         SG_ID=$(aws ec2 create-security-group --region "$REGION" \
             --group-name "${NAME}-sg" --description "K-Buddy single-instance deploy" \
             --query GroupId --output text)
+        # ★ `--output` 을 **생략하지 않는다.** 프로필의 기본 출력 형식이 잘못
+        #   설정돼 있으면(실제로 `output = json.` 이 들어간 적이 있다) API 호출은
+        #   성공한 뒤 응답을 렌더링하다 죽는다 — 자원은 만들어졌는데 스크립트는
+        #   실패한, 되짚기 어려운 상태가 된다.
         aws ec2 authorize-security-group-ingress --region "$REGION" --group-id "$SG_ID" \
+            --output text --query 'Return' \
             --ip-permissions \
             "IpProtocol=tcp,FromPort=80,ToPort=80,IpRanges=[{CidrIp=0.0.0.0/0,Description=http}]" \
             "IpProtocol=tcp,FromPort=22,ToPort=22,IpRanges=[{CidrIp=${MY_IP}/32,Description=ssh-admin}]"
@@ -151,7 +165,7 @@ if [[ $APPLY -eq 1 ]]; then
         --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=${NAME}}]" \
         --query 'Instances[0].InstanceId' --output text)
     echo "  → $IID  (기동 대기)"
-    aws ec2 wait instance-running --region "$REGION" --instance-ids "$IID"
+    aws ec2 wait instance-running --region "$REGION" --instance-ids "$IID" --output text
     IP=$(aws ec2 describe-instances --region "$REGION" --instance-ids "$IID" \
         --query 'Reservations[0].Instances[0].PublicIpAddress' --output text)
     cat <<EOF
