@@ -1,7 +1,7 @@
 """로컬 생성 속도 측정 — 배포 장치 선택의 입력 (ADR-004).
 
     python apps/api/scripts/bench_local_speed.py --device cpu --dtype bfloat16
-    python apps/api/scripts/bench_local_speed.py --device mps
+    python apps/api/scripts/bench_local_speed.py --device cuda
 
 왜 재는가
 ---------
@@ -47,7 +47,7 @@ EVIDENCE = "\n\n".join(
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--device", default="auto", choices=["auto", "mps", "cuda", "cpu"])
+    ap.add_argument("--device", default="auto", choices=["auto", "cuda", "cpu"])
     ap.add_argument("--dtype", default="auto",
                     choices=["auto", "float16", "bfloat16", "float32"])
     ap.add_argument("--model", default=None)

@@ -1,0 +1,57 @@
+# 해외송금 한도 규칙 (F6)
+#
+# ★★ **지금 이 파일에는 확인된 한도가 하나도 없다.** 그것이 현재 상태이고,
+#    빈 값을 채우는 것이 이 파일의 목적이 아니다.
+#
+#    기획서는 "연 5만 달러(전 업권 합산)"와 "건당 5,000달러"를 적었지만
+#    `docs/fact-check.md` 의 B4·B5·B6 이 **전부 ⬜(미확인)** 이고, 코퍼스에
+#    외국환거래규정·기재부 발표 문서가 **한 건도 없다**.
+#
+#    이 숫자를 코드나 이 파일에 박으면, 근거 없는 법정 한도를 외국인 이용자에게
+#    금융 안내로 내보내는 것이 된다 — 계층 판정·숫자 대조·3값 매트릭스를 만들어
+#    막으려던 바로 그 실패다. F2 가 "모르는 칸을 모른다고 표시"하듯 여기서도
+#    unknown 은 unknown 으로 나간다.
+#
+#    → B4·B5·B6 을 닫고(기재부 2025.12.8 발표 원문 · 외국환거래규정), 그때
+#      `status: official` 과 `evidence` 를 함께 채운다. 근거 없이 status 만
+#      올리면 로더가 기동에서 막는다.
+#
+# ★ **환율은 여기 두지 않는다.** ECOS 조회값이며 매 요청 달라진다
+#   (`app/tools/ecos_client.py`). 이 파일은 제도 값만 담는다.
+
+version: 1
+updated_at: "2026-08-21"
+
+limits:
+  # 연간 무증빙 한도 (전 업권 합산)
+  annual_no_doc_usd:
+    status: unknown        # official | inferred | unknown
+    value: null            # status 가 official/inferred 일 때만 채운다
+    evidence: []
+    # 기획서 값 50000 — fact-check B5 미확인. 확인 전까지 화면에 숫자를 내지 않는다.
+
+  # 건당 무증빙 한도
+  per_transaction_no_doc_usd:
+    status: unknown
+    value: null
+    evidence: []
+    # 기획서 값 5000 — fact-check B6 미확인.
+
+notes_ko: >-
+  해외송금 한도는 외국환거래규정과 기획재정부 고시에 따르며, 금융기관마다
+  운영 방식이 다를 수 있습니다. 현재 이 서비스는 한도 수치의 1차 출처를
+  확인하지 못했으므로 금액을 표시하지 않습니다. 송금 전 거래 은행이나
+  기획재정부·한국은행 안내를 확인하세요.
+notes_i18n:
+  en: >-
+    Overseas remittance limits follow the Foreign Exchange Transactions
+    Regulation and Ministry of Economy and Finance notices, and banks may
+    operate them differently. This service has not yet verified a primary
+    source for the limit figures, so it does not display an amount. Please
+    confirm with your bank or the official guidance before sending money.
+  vi: >-
+    Hạn mức chuyển tiền ra nước ngoài tuân theo Quy định giao dịch ngoại hối và
+    thông báo của Bộ Kinh tế và Tài chính, và mỗi ngân hàng có thể áp dụng khác
+    nhau. Dịch vụ này chưa xác minh được nguồn gốc chính thức của các con số hạn
+    mức nên không hiển thị số tiền. Vui lòng xác nhận với ngân hàng của bạn
+    trước khi chuyển tiền.

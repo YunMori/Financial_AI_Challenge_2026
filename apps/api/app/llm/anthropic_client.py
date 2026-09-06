@@ -195,7 +195,7 @@ def build_client():
 
         return build_local_client()
 
-    if not s.llm_enabled:
+    if not s.anthropic_key_present:
         from app.llm.base import NullLLMClient
 
         log.warning("ANTHROPIC_API_KEY 미설정 — 생성 기능이 비활성화됩니다 "

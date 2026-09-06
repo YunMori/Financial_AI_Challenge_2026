@@ -23,14 +23,15 @@ class TestDeviceResolution:
         assert resolve_device("cuda") == "cuda"
 
     def test_auto_returns_a_real_device(self):
-        assert resolve_device("auto") in ("cuda", "mps", "cpu")
+        """cuda 단일 경로다(ADR-005). cpu 는 등가성 검사 전용 폴백이다."""
+        assert resolve_device("auto") in ("cuda", "cpu")
 
     @pytest.mark.parametrize(
         "device,expected",
-        [("cuda", "bfloat16"), ("mps", "float16"), ("cpu", "float32")],
+        [("cuda", "bfloat16"), ("cpu", "float32")],
     )
     def test_dtype_defaults_per_device(self, device, expected):
-        """mps 는 bfloat16 지원이 고르지 않아 float16, cpu 는 float16 이 오히려 느리다."""
+        """cuda 는 판정·배포와 같은 bf16, cpu 는 float16 이 오히려 느려 float32."""
         import torch
 
         assert resolve_dtype(device, "auto") is getattr(torch, expected)
@@ -38,7 +39,7 @@ class TestDeviceResolution:
     def test_explicit_dtype_wins(self):
         import torch
 
-        assert resolve_dtype("mps", "float32") is torch.float32
+        assert resolve_dtype("cuda", "float32") is torch.float32
 
 
 class TestLazyLoad:
@@ -195,13 +196,17 @@ class TestGrammarRequiresAllFields:
             assert field in strict["required"], f"{field} 가 필수가 아니면 생략될 수 있다"
 
     def test_nested_citation_fields_are_required(self):
-        """`citations` 안의 ref·used_for 도 강제해야 인용이 반쪽이 되지 않는다."""
+        """`citations` 안의 `ref` 도 강제해야 인용이 반쪽이 되지 않는다.
+
+        중첩 스키마까지 훑는지를 보는 테스트다 — `Citation` 이 필드 하나가
+        되었어도 `$defs` 를 타고 들어가지 않으면 여전히 통과하면 안 된다.
+        """
         from app.llm.local_client import _require_all_fields
         from app.schemas.llm import LLMAnswer
 
         strict = _require_all_fields(LLMAnswer.model_json_schema())
         citation = strict["$defs"]["Citation"]
-        assert set(citation["required"]) >= {"ref", "used_for"}
+        assert set(citation["required"]) >= {"ref"}
 
     def test_pydantic_model_is_not_mutated(self):
         """문법만 엄격하게 만든다. 파이썬 쪽 기본값은 그대로 둔다."""
