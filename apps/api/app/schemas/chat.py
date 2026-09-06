@@ -147,6 +147,19 @@ class InvalidateEvent(BaseModel):
     )
 
 
+class NextAction(BaseModel):
+    """답변 뒤에 이어지는 행동 제안 (F4 → F3).
+
+    planner §10-F4 가 "기능 간 연결이 심사에서 완성도로 읽힌다"고 지목한 자리다.
+    **서버가 결정한다** — 어떤 프로필에서 어떤 다음 단계가 성립하는지는 규칙이고,
+    클라이언트가 추측하면 두 곳에 규칙이 생긴다.
+    """
+
+    type: Literal["checklist"]
+    label_key: str = Field(description="프론트 i18n 키. 문구는 클라이언트가 갖는다")
+    params: dict[str, str] = Field(default_factory=dict)
+
+
 class DoneEvent(BaseModel):
     """event: done — 최종 확정."""
 
@@ -154,3 +167,7 @@ class DoneEvent(BaseModel):
     latency_ms: int
     ai_generated: Literal[True] = True
     fallback_reason: FallbackReason | None = None
+    next_action: NextAction | None = Field(
+        default=None,
+        description="F4 가 답변 뒤에 F3 로 잇는다. 폴백일 때는 붙이지 않는다",
+    )

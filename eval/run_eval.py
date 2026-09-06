@@ -170,7 +170,8 @@ class NormalizeOnlyClient:
     -----------
     **Recall@5 는 ③ 정규화에만 의존한다.** 검색은 정규화된 검색어로 하고 ⑦ 의
     산출물을 쓰지 않는다. 그런데 두 단계의 비용이 자릿수로 다르다 (int8 실측,
-    MPS):
+    MPS — ADR-005 이전의 폐기된 장치이나 **자릿수 차이는 장치가 바뀌어도
+    남는다.** cuda 에서는 절대값이 크게 줄지만 ⑦ 이 ③ 을 압도하는 관계는 같다):
 
         ③ 정규화   20.8초 × 41문항 ≈ 14분      ← 잴 수 있다
         ⑦ 생성     ~1600초 × 41   ≈ 18시간     ← 못 잰다
@@ -208,8 +209,9 @@ def build_pipeline(no_llm: bool, no_generation: bool = False):
     from app.rag.retrieve import get_retriever
 
     s = get_settings()
-    # 로컬 백엔드는 키가 필요 없다 — `llm_enabled` 로 막으면 안 된다.
-    if no_llm or (s.llm_backend == "anthropic" and not s.llm_enabled):
+    # 로컬 백엔드는 키가 필요 없다. 그 규칙은 `generation_enabled` 하나가 갖는다 —
+    # 여기서 백엔드를 다시 분기하면 설정과 평가기가 어긋날 수 있다.
+    if no_llm or not s.generation_enabled:
         if not no_llm:
             print("★ ANTHROPIC_API_KEY 가 없어 --no-llm 으로 진행합니다.\n"
                   "  로컬 모델을 쓰려면 LLM_BACKEND=local 로 두세요.\n"
