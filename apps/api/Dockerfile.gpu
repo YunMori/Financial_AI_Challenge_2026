@@ -1,0 +1,87 @@
+# K-Buddy API — GPU (CUDA) 이미지
+#
+# `apps/api/Dockerfile` 의 GPU 판이다. 그쪽이 주석에 적어 둔 것을 실제로 한다:
+#
+#   > CPU 파일을 쓴다. 이 이미지는 GPU 런타임(`--gpus all`)을 전제하지 않는다 —
+#   > GPU 배포로 갈 때 requirements-gpu.txt 로 바꾸고 nvidia-container-toolkit 을 건다.
+#
+# 두 파일을 하나로 합치지 않는 이유: CPU 이미지는 CI·테스트가 쓰고 GPU 런타임을
+# 전제할 수 없다. 빌드 인자로 갈랐다가는 "어느 쪽으로 빌드됐는지" 가 이미지
+# 밖에서 보이지 않게 된다 — 이 프로젝트가 이미 두 번 겪은 형태의 사고다.
+#
+# 빌드 컨텍스트는 **리포 루트**다:
+#   docker build -f apps/api/Dockerfile.gpu -t kbuddy-api:gpu .
+#
+# ★ 가중치는 이미지에 넣지 않는다. 런타임에 `/models` 로 마운트한다 —
+#   8.43GB 를 이미지에 구우면 ADR-004 의 1차 3종 비교 때 후보마다 이미지를
+#   다시 빌드해야 한다. 마운트면 `LOCAL_MODEL` 한 줄로 바꾼다.
+FROM python:3.12-slim
+
+# WeasyPrint 시스템 의존성 + 다국어 폰트.
+# CPU 이미지와 **같은 목록을 유지한다** — F3 체크리스트 PDF 가 이 위에서 돈다.
+# 여기서 갈리면 "GPU 배포에서만 조판이 깨지는" 사고가 된다 (planner §15.4).
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        libpango-1.0-0 \
+        libpangoft2-1.0-0 \
+        libcairo2 \
+        libgdk-pixbuf-2.0-0 \
+        libffi8 \
+        shared-mime-info \
+        fonts-noto-core \
+        fonts-noto-cjk \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PIP_NO_CACHE_DIR=1
+ENV HF_HOME=/app/.cache/huggingface
+ENV EMBED_MODEL=intfloat/multilingual-e5-large
+
+# requirements-gpu.txt 는 `-r requirements-base.txt` 로 시작한다. 셋 다 복사한다.
+COPY apps/api/requirements-base.txt apps/api/requirements-gpu.txt ./
+
+# ★ **2단계다.** requirements-gpu.txt 헤더가 적어 둔 그대로 한다.
+#   `onnxruntime-gpu` 는 배포판 이름이 달라 chromadb·fastembed 의
+#   `onnxruntime>=…` 요구를 만족하지 못하고, pip 이 CPU 빌드를 전이 의존으로
+#   함께 깐다. 둘은 같은 `onnxruntime` 모듈을 점유해 **먼저 로드된 쪽이 이긴다** —
+#   지우지 않으면 임베딩이 에러 없이 CPU 로 돈다(e5-large 32건 88ms → 2,857ms).
+#
+#   지운 뒤 `pip check` 가 아래 두 줄을 보고하는 것은 **정상이다**:
+#       chromadb … requires onnxruntime, which is not installed.
+#       fastembed … requires onnxruntime, which is not installed.
+RUN pip install --no-cache-dir -r requirements-gpu.txt \
+    && pip uninstall -y onnxruntime \
+    && python -c "import onnxruntime, torch; print('ort', onnxruntime.__version__, '| torch', torch.__version__, '| cuda build', torch.version.cuda)"
+
+# ★ 임베딩 모델을 빌드 타임에 내려받는다 (CPU 이미지와 같은 이유 — planner §15.3).
+#
+#   `CUDA_VISIBLE_DEVICES=""` 가 **필요하다.** 빌드 컨테이너에는 GPU 가 없는데
+#   fastembed 0.8 의 기본값이 `cuda=Device.AUTO` 라, 비워 두지 않으면 여기서
+#   CUDA 세션을 만들려다 빌드가 죽는다. 런타임에는 이 값이 없으므로 GPU 를 탄다.
+RUN CUDA_VISIBLE_DEVICES="" python -c "from fastembed import TextEmbedding; \
+    import os; TextEmbedding(model_name=os.environ['EMBED_MODEL'])"
+
+# 인덱스는 빌드 타임에 동봉한다 (Chroma + BM25).
+# `apps/api/data/` 는 gitignore 라 새 체크아웃에 없다 — 빌드 전에
+# `03_chunk.py` → `04_index.py --rebuild` 를 돌려야 한다(deploy/bootstrap.sh 가 한다).
+COPY apps/api/data/ ./data/
+
+# 런타임에 읽는 자산. 빠뜨리면 **배포에서만** SystemExit 가 난다.
+COPY corpus/glossary/ ./corpus/glossary/
+COPY corpus/matrix/ ./corpus/matrix/
+
+COPY apps/api/app/ ./app/
+
+ENV PORT=10000
+EXPOSE 10000
+
+# ★ `--proxy-headers --forwarded-allow-ips` 가 **레이트리밋의 전제다.**
+#   slowapi 의 `get_remote_address` 는 `request.client.host` 를 본다. nginx 뒤에
+#   두면 그 값이 프록시 IP 로 고정돼 **전 이용자가 분당 20회 한 버킷을 공유**한다
+#   (planner §9.1 이 "IP당" 이라고 못박은 것이 조용히 깨진다).
+#   `--forwarded-allow-ips` 는 신뢰할 프록시를 한정한다 — `*` 로 두면 아무나
+#   X-Forwarded-For 를 위조해 한도를 우회하므로, compose 가 nginx 의 주소를 준다.
+ENV FORWARDED_ALLOW_IPS=127.0.0.1
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT} --proxy-headers --forwarded-allow-ips ${FORWARDED_ALLOW_IPS}"]

@@ -1980,3 +1980,82 @@ EV 인증서의 조직명·법인등록번호로 확인했다. EV 는 CA 가 법
   최신인 것처럼 보이는** 상태가 되고, 아무 에러도 나지 않는다.
 
 검증: 수정 후 `--verify` 재실행 → 매니페스트 sha256 동일, `git diff` 비어 있음.
+
+## 2026-09-07 — 단일 EC2 배포 구성: nginx 를 앞에 두자 레이트리밋이 깨져 있었다
+
+`apps/api/Dockerfile` 이 주석으로만 적어 두었던 것을 실제로 했다 — "GPU 배포로
+갈 때 requirements-gpu.txt 로 바꾸고 nvidia-container-toolkit 을 건다".
+한 대(`g6.xlarge` · `ap-northeast-2`)에 api·web·nginx 를 올린다.
+
+**선행 병합.** `feat/cuda-only-dev-and-overfallback` 이 main 에 없는 채로
+남아 있었다(커밋 6개 — ADR-005, requirements 3분할, F2·F3·F4, F6·F7·F8,
+exp_010~012). 배포가 requirements-gpu·CUDA 단일 경로·`corpus/matrix` 를
+전제하므로 먼저 병합했다.
+
+### 프록시가 레이트리밋을 무력화한다 ★
+
+nginx 를 앞에 두면 `slowapi` 의 `get_remote_address` 가 보는
+`request.client.host` 가 프록시 IP 로 고정된다. **전 이용자가 분당 20회 한
+버킷을 공유**하게 되고, planner §9.1 이 "IP당"이라고 못박은 것이 조용히
+깨진다. 에러도 로그도 남지 않는다 — 한도에 걸린 이용자가 남의 요청 때문에
+막히는 형태로만 나타난다.
+
+대응이 **세 파일에 걸쳐 쌍으로** 맞아야 한다:
+
+| 파일 | 역할 |
+|---|---|
+| `deploy/nginx.conf` | `X-Forwarded-For` 를 넘긴다 |
+| `apps/api/Dockerfile.gpu` | uvicorn `--proxy-headers --forwarded-allow-ips` |
+| `deploy/docker-compose.yml` | 그 값에 nginx 고정 IP `172.28.0.10` 을 준다 |
+
+`--forwarded-allow-ips=*` 는 쓰지 않는다. 아무나 헤더를 위조해 한도를
+우회한다. 신뢰할 프록시를 한정하려면 주소가 고정되어야 해서 compose 에
+서브넷(`172.28.0.0/24`)과 고정 IP 를 박았다. **한쪽만 바꾸면 되돌아간다.**
+
+### `proxy_buffering off` 와 300초 타임아웃
+
+nginx 기본값(`proxy_buffering on`)이면 SSE 응답을 모아 두었다가 한 번에
+내보낸다. 화면에는 "멈춰 있다가 답이 한꺼번에 나오는" 형태로 보이고
+`ttft_ms` 계측이 무의미해진다.
+
+타임아웃은 기본 60초로는 못 쓴다. `exp_012` 의 생성 지연 p95 가 149초,
+`upstream_error` 문항은 cap 2048 을 그대로 태워 p50 156초였다(ADR-005 후속 ⑨).
+300초를 준다 — **지연을 고치는 것이 아니라 감추는 값이다.** 그 과제는 그대로 남아 있다.
+
+### 8.43GB 를 업로드하지 않는다
+
+인덱스도 가중치도 리포에 있는 것만으로 인스턴스에서 재생성된다:
+
+```
+corpus/processed/*.md  (git 추적)  → 03_chunk → 04_index → apps/api/data/
+Qwen/Qwen3.5-4B        (HF 허브)   → export_local_model --stage textonly
+```
+
+순서가 고정된다 — **인덱스 → API 이미지 → 가중치.** GPU 이미지가
+`apps/api/data/` 를 COPY 하고, 가중치 산출이 그 이미지의 torch 를 빌려 쓴다.
+`bootstrap.sh` 가 이 순서를 강제하고 멱등하게 돈다.
+
+가중치는 이미지에 굽지 않고 `/models` 로 마운트한다. ADR-004 의 1차 3종
+비교 때 후보마다 이미지를 다시 빌드하는 대신 `LOCAL_MODEL` 한 줄로 바꾼다.
+대신 `models/` 를 `.dockerignore` 에 넣어야 했다 — 7.9GB 가 빌드 컨텍스트로
+전송되면 빌드가 사실상 멈춘다.
+
+### 빌드 타임에는 GPU 가 없다
+
+`Dockerfile.gpu` 가 임베딩 모델을 구울 때 `CUDA_VISIBLE_DEVICES=""` 를 준다.
+fastembed 0.8 의 기본값이 `cuda=Device.AUTO` 라, 비워 두지 않으면 GPU 없는
+빌드 컨테이너에서 CUDA 세션을 만들려다 빌드가 죽는다.
+
+`pip uninstall -y onnxruntime` 는 `requirements-gpu.txt` 헤더가 적어 둔
+2단계를 이미지가 그대로 한 것이다. 빠뜨리면 임베딩이 **에러 없이** CPU 로
+돌아 32배 느려진다.
+
+### 검증한 것 / 못 한 것
+
+- ✅ Next.js standalone 빌드 — `check-i18n`(194키 6언어) 통과, `server.js` 생성,
+  번들에 `localhost:8000` 이 남지 않고 상대 경로 `/api/v1` 로 주입됨.
+- ✅ `docker compose config` 문법.
+- ⬜ nginx 문법 — 로컬 Docker 데몬이 꺼져 있어 인스턴스에서 확인한다.
+- ⬜ **ADR-005 §6 의 AWS 1회 검증.** 개발 GPU 는 sm_120, 배포 타깃은 sm_86/89 다.
+  인스턴스에서 `exp_011` 을 재현해 같은 산출물이 나오는지 확인하는 것이
+  이 배포의 실질적 수용 기준이다. 아직 AWS 자격증명이 없어 실행하지 못했다.
