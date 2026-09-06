@@ -31,6 +31,13 @@ ENV NEXT_OUTPUT_STANDALONE=1
 # 빌드에서 걸러야지 화면에서 발견하면 늦다.
 RUN npm run check-i18n && npm run build
 
+# ★ `public/` 이 **없을 수 있다.** 지금 비어 있고, git 은 빈 디렉터리를
+#   추적하지 않아 새 체크아웃에는 존재하지 않는다. 아래 runner 의 COPY 가
+#   그대로 실패한다("/app/public": not found) — 로컬 작업 트리에서는 폴더가
+#   보이므로 **배포에서만 터지는** 형태다(실측 2026-09-07, EC2 첫 빌드).
+#   정적 자산이 생기면 이 줄은 아무 일도 하지 않는다.
+RUN mkdir -p /app/public
+
 
 FROM node:22-slim AS runner
 
