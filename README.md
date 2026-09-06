@@ -89,25 +89,40 @@ cd apps/web && npm run check-i18n
 
 ## 배포
 
-```bash
-# 빌드 컨텍스트는 리포 루트다 (corpus/glossary 를 담아야 하므로)
-docker build -f apps/api/Dockerfile -t kbuddy-api .
+**단일 EC2(`g6.xlarge` · `ap-northeast-2`)에 API·프런트·프록시를 함께 올린다.**
+로컬 생성 모델이 그 GPU 에서 돌아 **외부로 나가는 호출이 없다** — planner §15.2
+의 국내 리전 원칙이 문구가 아니라 실제로 충족된다(ADR-004·ADR-005).
 
-# API 백엔드 (외부 생성 호출)
-docker run -p 10000:10000 -e ANTHROPIC_API_KEY=sk-ant-... kbuddy-api
-
-# 로컬 백엔드 (외부 호출 없음, GPU 권장)
-docker run -p 10000:10000 -e LLM_BACKEND=local kbuddy-api
+```
+Internet :80  →  nginx  ├─ /api/v1, /healthz  →  api:10000  FastAPI + Qwen3.5-4B (CUDA)
+                        └─ /                   →  web:3000   Next.js standalone
 ```
 
-- 백엔드: **AWS 서울 리전(ap-northeast-2) 이전 중** — GPU 인스턴스(g5/g6).
-  로컬 생성 모델을 쓰면 planner §15.2 의 국내 리전 원칙이 **실제로 충족**된다
-  (ADR-004). Render 배포는 폐기했다 — 배포 경로를 둘로 두면 8주 차에 사고가 난다.
-- 프론트: Vercel (`apps/web/vercel.json`)
+```bash
+aws configure                             # 리전 ap-northeast-2
+bash deploy/provision-aws.sh              # 계획만 출력 (아무것도 만들지 않음)
+bash deploy/provision-aws.sh --apply      # 실제 생성
 
-> ⚠ **AWS 이전은 아직 실측되지 않았다.** 검증되지 않은 IaC 를 지어내지 않고,
-> 필요한 조건(리전·인스턴스·모델 가중치 사전 포함·비용 운영)을 ADR-004 에
-> 적어 두었다. 메모리·지연 실측 후 배포 설정을 확정한다.
+# 인스턴스에서
+sudo bash deploy/bootstrap.sh             # 드라이버 확인 → 인덱스 → 가중치 → 기동
+curl -s localhost/healthz
+```
+
+절차·함정·비용은 **[`deploy/README.md`](deploy/README.md)** 에 있다.
+인덱스와 가중치는 업로드하지 않는다 — 리포에 있는 것만으로 인스턴스에서
+재생성된다(`corpus/processed/*.md` → 인덱스, HF 허브 → textonly 8.43GB).
+
+로컬 개발용 CPU 이미지는 그대로 남는다:
+
+```bash
+docker build -f apps/api/Dockerfile -t kbuddy-api .        # CPU (CI·테스트)
+docker build -f apps/api/Dockerfile.gpu -t kbuddy-api:gpu . # CUDA (배포)
+```
+
+> ⚠ **배포 타깃에서 아직 실측되지 않았다.** 개발 GPU 는 RTX 5060 Ti(sm_120),
+> 배포 타깃은 sm_86/89 라 커널 경로가 갈릴 수 있다. 인스턴스에서 `exp_011` 을
+> 재현해 같은 산출물이 나오는지 확인하는 것이 수용 기준이다(ADR-005 §6).
+> Render 배포는 폐기했다 — 배포 경로를 둘로 두면 8주 차에 사고가 난다.
 
 ## 문서
 
