@@ -4,6 +4,11 @@
 #
 #   bash deploy/provision-aws.sh            # 계획만 출력한다 (아무것도 만들지 않음)
 #   bash deploy/provision-aws.sh --apply    # 실제로 만든다
+#   MODE=cpu bash deploy/provision-aws.sh --apply   # CPU 스테이징
+#
+# MODE=cpu 는 G 쿼터가 승인되기 전에 배선을 검증하기 위한 임시 경로다.
+# 인스턴스 타입·AMI·볼륨이 함께 바뀐다 — GPU AMI(DLAMI)는 드라이버를 담느라
+# 무겁고 CPU 인스턴스에서는 쓸 이유가 없다.
 #
 # ★ **과금이 시작된다.** g6.xlarge 온디맨드는 시간당 대략 $1 수준이고 상시
 #   가동하면 월 수십만원이다. 정확한 값은 요금 페이지에서 확인한다:
@@ -15,9 +20,27 @@
 set -euo pipefail
 
 REGION="${REGION:-ap-northeast-2}"
-INSTANCE_TYPE="${INSTANCE_TYPE:-g6.xlarge}"
-VOLUME_GB="${VOLUME_GB:-200}"
-NAME="${NAME:-kbuddy}"
+MODE="${MODE:-gpu}"
+case "$MODE" in
+    gpu)
+        # 200GB — GPU 이미지(torch cu13 + onnxruntime-gpu + nvidia 런타임
+        # ~1.5GB + 임베딩 2.2GB)가 10GB 를 넘고, 그 위에 가중치 8.43GB 와
+        # HF 캐시(원본 10GB)가 얹힌다.
+        INSTANCE_TYPE="${INSTANCE_TYPE:-g6.xlarge}"
+        VOLUME_GB="${VOLUME_GB:-200}"
+        NAME="${NAME:-kbuddy}"
+        ;;
+    cpu)
+        # t3.large(8GB). t3.medium(4GB)도 될 수 있으나 **재 본 적이 없다** —
+        # ADR-003 이 "Phase 7 컨테이너 메모리 실측 후 확정"으로 남겨 둔 값이
+        # 아직 비어 있다. 이 배포가 그 실측을 만든다. 넉넉히 잡고, 실제 사용량을
+        # 보고 내린다 — OOM 을 디버깅하는 비용이 인스턴스 차액보다 크다.
+        INSTANCE_TYPE="${INSTANCE_TYPE:-t3.large}"
+        VOLUME_GB="${VOLUME_GB:-40}"
+        NAME="${NAME:-kbuddy-cpu}"
+        ;;
+    *) echo "MODE 는 gpu 또는 cpu 다 (받은 값: $MODE)" >&2; exit 1 ;;
+esac
 KEY_NAME="${KEY_NAME:-kbuddy-key}"
 APPLY=0
 [[ "${1:-}" == "--apply" ]] && APPLY=1
@@ -26,7 +49,7 @@ run() {
     if [[ $APPLY -eq 1 ]]; then "$@"; else printf '  (계획) %s\n' "$*"; fi
 }
 
-echo "리전 $REGION · 타입 $INSTANCE_TYPE · 루트 ${VOLUME_GB}GB gp3"
+echo "모드 $MODE · 리전 $REGION · 타입 $INSTANCE_TYPE · 루트 ${VOLUME_GB}GB gp3"
 aws sts get-caller-identity --output text --query 'Arn' \
     || { echo "✗ 자격증명이 없다. 먼저 'aws configure' 를 실행한다." >&2; exit 1; }
 
@@ -34,11 +57,20 @@ aws sts get-caller-identity --output text --query 'Arn' \
 # 드라이버가 포함된 AMI 를 쓴다. bootstrap.sh 가 드라이버를 설치하지 않는
 # 이유는 그 파일 주석에 있다 — 커널 모듈·재부팅이 얽혀 실패 원인이 흐려진다.
 echo
-echo "AMI 조회 (Deep Learning Base OSS Nvidia Driver GPU · Ubuntu 22.04)"
-AMI_ID=$(aws ec2 describe-images --region "$REGION" --owners amazon \
-    --filters "Name=name,Values=Deep Learning Base OSS Nvidia Driver GPU AMI (Ubuntu 22.04)*" \
-              "Name=state,Values=available" \
-    --query 'sort_by(Images,&CreationDate)[-1].[ImageId,Name]' --output text)
+if [[ "$MODE" == "gpu" ]]; then
+    echo "AMI 조회 (Deep Learning Base OSS Nvidia Driver GPU · Ubuntu 22.04)"
+    AMI_ID=$(aws ec2 describe-images --region "$REGION" --owners amazon \
+        --filters "Name=name,Values=Deep Learning Base OSS Nvidia Driver GPU AMI (Ubuntu 22.04)*" \
+                  "Name=state,Values=available" \
+        --query 'sort_by(Images,&CreationDate)[-1].[ImageId,Name]' --output text)
+else
+    # 소유자 필터를 거치는 describe-images 대신 Canonical 이 관리하는 SSM 공개
+    # 파라미터를 쓴다. 이름 패턴이 바뀌어도 깨지지 않는다.
+    echo "AMI 조회 (Ubuntu 24.04 LTS · SSM 공개 파라미터)"
+    AMI_ID=$(aws ssm get-parameter --region "$REGION" \
+        --name /aws/service/canonical/ubuntu/server/24.04/stable/current/amd64/hvm/ebs-gp3/ami-id \
+        --query 'Parameter.Value' --output text)
+fi
 echo "  → $AMI_ID"
 [[ "$AMI_ID" == "None" || -z "$AMI_ID" ]] && { echo "✗ AMI 를 찾지 못했다." >&2; exit 1; }
 AMI_ID=$(echo "$AMI_ID" | awk '{print $1}')
@@ -138,5 +170,9 @@ EOF
 else
     echo "  (계획) run-instances"
     echo
-    echo "실제로 만들려면: bash deploy/provision-aws.sh --apply"
+    if [[ "$MODE" == "gpu" ]]; then
+        echo "실제로 만들려면: bash deploy/provision-aws.sh --apply"
+    else
+        echo "실제로 만들려면: MODE=cpu bash deploy/provision-aws.sh --apply"
+    fi
 fi
