@@ -2177,3 +2177,73 @@ planner §9.1 의 "IP당 분 20회"가 **선언만 있고 구현이 없다.**
 
 > 인스턴스는 과금 중이다. `aws ec2 stop-instances --region ap-northeast-2
 > --instance-ids i-0007a9eb3cf2705ac`
+
+## 2026-09-07 (마무리) — 실키를 꽂자 두 개가 더 나왔다: maxItems 와 임베딩 캐시
+
+`.env` 에 실 API 키를 넣고 CPU 스테이징을 관통시켰다. 인증은 바로 통과했고,
+그 뒤에서 **API 경로가 통째로 죽어 있던 것**이 드러났다.
+
+### ① `maxItems` 가 Anthropic 경로를 죽이고 있었다 ★
+
+```
+400 invalid_request_error — output_config.format.schema:
+For 'array' type, property 'maxItems' is not supported
+```
+
+ADR-005 후속 ⑦ 이 `numbers_used` 무한 반복을 막으려고 스키마에 넣은 상한
+(`numbers_used max_length=24` · `citations max_length=12`)이 원인이다.
+**한 스키마를 두 백엔드가 다르게 받아들인다** — XGrammar 는 `maxItems` 를
+문법 차원에서 강제하고(그래서 ⑦ 의 수정이 성립한다), Anthropic 구조화 출력은
+그것을 거부한다.
+
+ADR-004 가 "실측이 미달이면 `LLM_BACKEND=anthropic` 한 줄로 되돌아가고,
+exp_002~005 의 재현성도 그 경로로 유지된다"고 적어 둔 **탈출구가 막혀 있었다.**
+로컬 백엔드만 쓰는 동안 아무도 그 문을 열어 보지 않은 것이다.
+
+`_strict_schema` 에서만 `maxItems`/`minItems` 를 떼어 낸다. Pydantic 모델은
+건드리지 않는다 — 로컬 경로의 강제는 유지되고, 응답은 어차피 `LLMAnswer`
+검증을 다시 거친다. 회귀 테스트 5종(`test_anthropic_schema.py`)은 **두 성질을
+함께** 본다. 한쪽만 보면 다른 쪽이 조용히 깨진다.
+
+### ② 빌드 타임에 구운 임베딩 모델을 런타임이 못 찾는다 ★
+
+Dockerfile 이 "이 줄이 없으면 첫 요청이 모델 다운로드(2.2GB)를 기다리고,
+심사위원이 처음 접속했을 때 그 일이 벌어진다"(planner §15.3)고 못박아 둔 줄이
+**아무것도 막지 못하고 있었다.**
+
+빌드는 `cache_dir` 없이 `TextEmbedding` 을 만들어 fastembed 기본 위치에 받는데,
+앱은 `settings.embed_cache_path`(=`/app/data/embed_cache`)를 넘겨 조회한다
+(`app/rag/embed.py:142`). 경로가 어긋나 **매 기동마다 2.1GB 를 새로 받는다.**
+
+실측: `/app/.cache` 268K vs `/app/data/embed_cache` 2.1GB, 기동 로그에
+`Fetching 6 files`. 빌드 타임에도 같은 `cache_dir` 를 넘겨 고쳤다 — 수정 후
+기동 로그의 다운로드 관련 줄 **0건**.
+
+### ③ CPU 이미지가 쓰지 않는 CUDA 라이브러리를 싣고 있었다
+
+PyPI 의 리눅스 torch 휠이 nvidia-cu13 런타임을 자동 동반한다. GPU 를 전제하지
+않는 이미지에는 낭비이고, 40GB 루트 볼륨에서 재빌드가 `no space left on
+device` 로 죽었다. CPU 전용 휠을 먼저 깔아 해결(`torch 2.14.0+cpu`,
+`torch.version.cuda` None, nvidia 패키지 없음).
+
+> 이미지는 여전히 8.34GB 다. 남은 큰 것은 `triton` 897M(torch 동반) ·
+> `kaleido` 221M + `plotly` 187M(리포트 그림 전용, 런타임 불필요)이다.
+> 런타임 이미지에서 뺄 여지가 있으나 이번 범위 밖으로 둔다.
+
+### 관통 확인 (3개 언어)
+
+| 언어 | tier | 인용 | 폴백 | 지연 |
+|---|---|---:|---|---:|
+| ko | A | 5 | 없음 | 11.3s |
+| en | A | 5 | 없음 | 6.7s |
+| vi | B | 5 | 없음 | 8.0s |
+
+세 언어 모두 **요청 언어로 답했다.** 2 vCPU CPU 임베딩 기준이며 GPU 판정과는
+무관한 값이다.
+
+### 남은 것
+
+- **레이트리밋 미구현** — 앞 절 ②. `@limiter.limit` 이 어느 라우트에도 없다.
+- **`generation_enabled` 가 자리표시자를 참으로 본다** — `"None"` 같은 문자열도
+  `bool()` 이 참이라 `/healthz` 가 `llm_configured: true` 를 거짓 보고한다.
+- HTTPS 없음(80 만). 도메인이 정해지면 certbot.
