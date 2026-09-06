@@ -330,7 +330,7 @@ async def main() -> int:
     args = ap.parse_args()
 
     s = get_settings()
-    if not s.llm_enabled:
+    if not s.anthropic_key_present:
         print("★ ANTHROPIC_API_KEY 가 설정되지 않았습니다.")
         print("  .env 의 `ANTHROPIC_API_KEY=` 줄에 키를 넣고 다시 실행하세요.")
         return 1
